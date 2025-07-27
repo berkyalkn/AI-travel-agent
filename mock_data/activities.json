@@ -1,0 +1,40 @@
+{
+    "history": [
+      {"name": "Colosseum", "description": "Ancient Roman amphitheater.", "location": "Rome"},
+      {"name": "Roman Forum", "description": "Ruins of ancient government buildings.", "location": "Rome"},
+      {"name": "Acropolis of Athens", "description": "Ancient citadel located on a rocky outcrop above the city of Athens.", "location": "Athens"},
+      {"name": "Tower of London", "description": "Historic castle located on the north bank of the River Thames.", "location": "London"},
+      {"name": "Brandenburg Gate", "description": "18th-century neoclassical monument in Berlin.", "location": "Berlin"},
+      {"name": "Anne Frank House", "description": "Writer's house and biographical museum.", "location": "Amsterdam"}
+    ],
+    "food": [
+      {"name": "Trastevere Food Tour", "description": "Explore local eateries and taste authentic Roman food.", "location": "Rome"},
+      {"name": "Pizza Making Class", "description": "Learn to make classic Italian pizza.", "location": "Rome"},
+      {"name": "Paella Cooking Experience", "description": "Learn to cook a traditional Spanish paella.", "location": "Barcelona"},
+      {"name": "Borough Market Tour", "description": "Explore one of London's largest and oldest food markets.", "location": "London"},
+      {"name": "Tokyo Ramen Tasting", "description": "Visit multiple famous ramen shops in one tour.", "location": "Tokyo"},
+      {"name": "Bangkok Street Food Tour", "description": "A guided tour of the best street food stalls.", "location": "Bangkok"}
+    ],
+    "art": [
+      {"name": "Vatican Museums", "description": "Home to masterpieces of painting, sculpture.", "location": "Rome"},
+      {"name": "Borghese Gallery", "description": "A gallery housing a substantial part of the Borghese collection.", "location": "Rome"},
+      {"name": "Louvre Museum", "description": "The world's largest art museum and a historic monument.", "location": "Paris"},
+      {"name": "Musée d'Orsay", "description": "Museum housed in a former railway station, known for Impressionist art.", "location": "Paris"},
+      {"name": "Rijksmuseum", "description": "Dutch national museum dedicated to arts and history.", "location": "Amsterdam"},
+      {"name": "Prado Museum", "description": "Spain's main national art museum, located in central Madrid.", "location": "Madrid"}
+    ],
+    "adventure": [
+      {"name": "Hiking the Swiss Alps", "description": "A guided day hike near Zurich.", "location": "Zurich"},
+      {"name": "Sydney Harbour Bridge Climb", "description": "Climb the iconic bridge for panoramic views.", "location": "Sydney"},
+      {"name": "Scuba Diving in the Red Sea", "description": "A day trip for scuba diving.", "location": "Cairo"},
+      {"name": "Desert Safari with Dune Bashing", "description": "An evening desert safari tour.", "location": "Dubai"},
+      {"name": "Vltava River Kayaking", "description": "Kayaking tour through the heart of Prague.", "location": "Prague"}
+    ],
+    "shopping": [
+      {"name": "Shopping in Ginza District", "description": "Tokyo's most famous upmarket shopping, dining and entertainment district.", "location": "Tokyo"},
+      {"name": "Grand Bazaar Exploration", "description": "One of the largest and oldest covered markets in the world.", "location": "Istanbul"},
+      {"name": "Galleria Vittorio Emanuele II", "description": "Italy's oldest active shopping gallery and a major landmark.", "location": "Milan"},
+      {"name": "Le Bon Marché", "description": "The first-ever modern department store.", "location": "Paris"},
+      {"name": "Oxford Street Spree", "description": "Europe's busiest shopping street, with around half a million daily visitors.", "location": "London"}
+    ]
+  }
