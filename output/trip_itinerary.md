@@ -8,58 +8,40 @@ A 6-day trip for 3 people, focusing on adventure, food.
 - **Total Price:** €2850.00
 
 ## 🏨 Hotel Information
-- **Hotel Name:** Times Square Lux Suites
-- **Rating:** 4.7 / 5.0
-- **Total Price for Stay:** €3375.00
+- **Hotel Name:** Brooklyn Bridge Inn
+- **Rating:** 4.4 / 5.0
+- **Total Price for Stay:** €2100.00
 
 ---
 
 ## 🗺️ Daily Itinerary
 
 ### Day 1
-- **Morning: Explore Times Square**
-  - *Start your trip by exploring the iconic Times Square.*
-  - Location: New York
-- **Afternoon: Walk across the Brooklyn Bridge**
-  - *Take in the stunning Manhattan skyline views.*
+- **Morning: Borough Market Tour**
+  - *Explore one of London's largest and oldest food markets.*
   - Location: New York
 
 ### Day 2
-- **Morning: Visit the Statue of Liberty**
-  - *Take a ferry to Liberty Island to see the iconic statue.*
-  - Location: New York
-- **Afternoon: Central Park Stroll**
-  - *Relax in the tranquil surroundings of Central Park.*
+- **Afternoon: Pizza Making Class**
+  - *Learn to make classic Italian pizza.*
   - Location: New York
 
 ### Day 3
-- **Morning: 9/11 Memorial & Museum**
-  - *Pay respects at the poignant memorial and museum.*
-  - Location: New York
-- **Afternoon: Broadway Show**
-  - *Catch a matinee or evening performance of a hit Broadway show.*
+- **Evening: Paella Cooking Experience**
+  - *Learn to cook a traditional Spanish paella.*
   - Location: New York
 
 ### Day 4
-- **Morning: Metropolitan Museum of Art**
-  - *Spend the day exploring the world-class museum.*
-  - Location: New York
-- **Afternoon: High Line Walk**
-  - *Stroll along the elevated park built on an old rail line.*
+- **Lunch: Tokyo Ramen Tasting**
+  - *Visit multiple famous ramen shops in one tour.*
   - Location: New York
 
 ### Day 5
-- **Morning: Rockefeller Center Tour**
-  - *Learn about the history and significance of the iconic center.*
-  - Location: New York
-- **Afternoon: Shopping in SoHo**
-  - *Browse the trendy boutiques and art galleries.*
+- **Dinner: Bangkok Street Food Tour**
+  - *A guided tour of the best street food stalls.*
   - Location: New York
 
 ### Day 6
-- **Morning: One World Trade Center Observation Deck**
-  - *Take in panoramic views of the city from the tallest building.*
-  - Location: New York
-- **Evening: Farewell Dinner in Little Italy**
-  - *Enjoy a delicious Italian meal before departing.*
+- **Brunch: Trastevere Food Tour**
+  - *Explore local eateries and taste authentic Roman food.*
   - Location: New York
