@@ -17,41 +17,26 @@ A 5-day trip for 2 people, focusing on history, food.
 ## 🗺️ Daily Itinerary
 
 ### Day 1
-- **Morning: Anne Frank House**
-  - *Writer's house and biographical museum.*
-  - Location: Amsterdam
-- **Afternoon: Canal Belt Exploration**
-  - *Explore the historic 17th-century canal district, a UNESCO World Heritage site.*
-  - Location: Amsterdam
+- **Morning: Explore Amsterdam**
+  - *Discover the city*
+  - Location: City Center
 
 ### Day 2
-- **Morning: Royal Palace Amsterdam**
-  - *One of three palaces in the Netherlands at the disposal of the Monarch.*
-  - Location: Amsterdam
-- **Afternoon: Stroopwafel & Dutch Cheese Tasting**
-  - *Taste the iconic stroopwafel and a variety of local cheeses.*
-  - Location: Amsterdam
+- **Afternoon: Visit the Rijksmuseum**
+  - *Learn about Dutch art and history*
+  - Location: Museumplein
 
 ### Day 3
-- **Morning: Albert Cuyp Market Food Stalls**
-  - *Experience diverse street food at the largest day market in the Netherlands.*
-  - Location: Amsterdam
-- **Afternoon: Brandenburg Gate**
-  - *18th-century neoclassical monument in Berlin.*
-  - Location: Berlin
+- **Morning: Walk through the Jordaan**
+  - *Admire the charming architecture*
+  - Location: Jordaan
 
 ### Day 4
-- **Morning: Tower of London**
-  - *Historic castle located on the north bank of the River Thames.*
-  - Location: London
-- **Afternoon: Borough Market Tour**
-  - *Explore one of London's largest and oldest food markets.*
-  - Location: London
+- **Evening: Try local food**
+  - *Sample traditional Dutch cuisine*
+  - Location: Food Market
 
 ### Day 5
-- **Morning: Anne Frank House**
-  - *Writer's house and biographical museum.*
-  - Location: Amsterdam
-- **Afternoon: Canal Belt Exploration**
-  - *Explore the historic 17th-century canal district, a UNESCO World Heritage site.*
-  - Location: Amsterdam
+- **Afternoon: Visit the Anne Frank House**
+  - *Learn about the famous diary*
+  - Location: Prinsengracht
