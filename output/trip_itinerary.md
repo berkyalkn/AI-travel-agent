@@ -1,46 +1,57 @@
-# Your Trip to Rome
+# Your Trip to Amsterdam
 
-A 4-day trip for 2 people, focusing on art, food.
+A 5-day trip for 2 people, focusing on history, food.
 
 ## ✈️ Flight Information
-- **Airline:** Pegasus Airlines
+- **Airline:** AJET
 - **Origin:** Istanbul (SAW)
-- **Total Price:** €529.24
+- **Total Price:** €427.63
 
 ## 🏨 Hotel Information
-- **Hotel Name:** The Grand Colosseum Hotel
-- **Rating:** 4.8 / 5.0
-- **Total Price for Stay:** €750.00
+- **Hotel Name:** The July - Boat & Co
+- **Rating:** 9.2 / 5.0
+- **Total Price for Stay:** €1011.62
 
 ---
 
 ## 🗺️ Daily Itinerary
 
 ### Day 1
-- **Morning: Vatican Museums**
-  - *Home to masterpieces of painting, sculpture.*
-  - Location: Rome
-- **Evening: Trastevere Food Tour**
-  - *Explore local eateries and taste authentic Roman food.*
-  - Location: Rome
+- **Morning: Anne Frank House**
+  - *Writer's house and biographical museum.*
+  - Location: Amsterdam
+- **Afternoon: Canal Belt Exploration**
+  - *Explore the historic 17th-century canal district, a UNESCO World Heritage site.*
+  - Location: Amsterdam
 
 ### Day 2
-- **Morning: Borghese Gallery**
-  - *A gallery housing a substantial part of the Borghese collection.*
-  - Location: Rome
-- **Afternoon: Pizza Making Class**
-  - *Learn to make classic Italian pizza.*
-  - Location: Rome
+- **Morning: Royal Palace Amsterdam**
+  - *One of three palaces in the Netherlands at the disposal of the Monarch.*
+  - Location: Amsterdam
+- **Afternoon: Stroopwafel & Dutch Cheese Tasting**
+  - *Taste the iconic stroopwafel and a variety of local cheeses.*
+  - Location: Amsterdam
 
 ### Day 3
-- **Morning: Trastevere Food Tour**
-  - *Explore local eateries and taste authentic Roman food.*
-  - Location: Rome
-- **Afternoon: Vatican Museums**
-  - *Home to masterpieces of painting, sculpture.*
-  - Location: Rome
+- **Morning: Albert Cuyp Market Food Stalls**
+  - *Experience diverse street food at the largest day market in the Netherlands.*
+  - Location: Amsterdam
+- **Afternoon: Brandenburg Gate**
+  - *18th-century neoclassical monument in Berlin.*
+  - Location: Berlin
 
 ### Day 4
-- **Morning: Pizza Making Class**
-  - *Learn to make classic Italian pizza.*
-  - Location: Rome
+- **Morning: Tower of London**
+  - *Historic castle located on the north bank of the River Thames.*
+  - Location: London
+- **Afternoon: Borough Market Tour**
+  - *Explore one of London's largest and oldest food markets.*
+  - Location: London
+
+### Day 5
+- **Morning: Anne Frank House**
+  - *Writer's house and biographical museum.*
+  - Location: Amsterdam
+- **Afternoon: Canal Belt Exploration**
+  - *Explore the historic 17th-century canal district, a UNESCO World Heritage site.*
+  - Location: Amsterdam
