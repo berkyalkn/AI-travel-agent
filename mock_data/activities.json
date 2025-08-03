@@ -6,6 +6,9 @@
       {"name": "Tower of London", "description": "Historic castle located on the north bank of the River Thames.", "location": "London"},
       {"name": "Brandenburg Gate", "description": "18th-century neoclassical monument in Berlin.", "location": "Berlin"},
       {"name": "Anne Frank House", "description": "Writer's house and biographical museum.", "location": "Amsterdam"},
+      {"name": "Anne Frank House", "description": "Writer's house and biographical museum.", "location": "Amsterdam"},
+      {"name": "Royal Palace Amsterdam", "description": "One of three palaces in the Netherlands at the disposal of the Monarch.", "location": "Amsterdam"},
+      {"name": "Canal Belt Exploration", "description": "Explore the historic 17th-century canal district, a UNESCO World Heritage site.", "location": "Amsterdam"},
       {"name": "Colosseum", "description": "Ancient Roman amphitheater.", "location": "Rome"},
       {"name": "Roman Forum", "description": "Ruins of ancient government buildings.", "location": "Rome"},
       {"name": "Statue of Liberty & Ellis Island", "description": "Visit the iconic statue and the historic immigration station.", "location": "New York"}
@@ -16,6 +19,8 @@
       {"name": "Paella Cooking Experience", "description": "Learn to cook a traditional Spanish paella.", "location": "Barcelona"},
       {"name": "Borough Market Tour", "description": "Explore one of London's largest and oldest food markets.", "location": "London"},
       {"name": "Tokyo Ramen Tasting", "description": "Visit multiple famous ramen shops in one tour.", "location": "Tokyo"},
+      {"name": "Stroopwafel & Dutch Cheese Tasting", "description": "Taste the iconic stroopwafel and a variety of local cheeses.", "location": "Amsterdam"},
+      {"name": "Albert Cuyp Market Food Stalls", "description": "Experience diverse street food at the largest day market in the Netherlands.", "location": "Amsterdam"},
       {"name": "Bangkok Street Food Tour", "description": "A guided tour of the best street food stalls.", "location": "Bangkok"},{
         "name": "Trastevere Food Tour", "description": "Explore local eateries and taste authentic Roman food.", "location": "Rome"},
       {"name": "Smorgasburg Food Market", "description": "A giant all-food market in Brooklyn.", "location": "New York"},
@@ -27,6 +32,8 @@
       {"name": "Louvre Museum", "description": "The world's largest art museum and a historic monument.", "location": "Paris"},
       {"name": "Musée d'Orsay", "description": "Museum housed in a former railway station, known for Impressionist art.", "location": "Paris"},
       {"name": "Rijksmuseum", "description": "Dutch national museum dedicated to arts and history.", "location": "Amsterdam"},
+      {"name": "Van Gogh Museum", "description": "Home to the largest collection of artworks by Vincent van Gogh.", "location": "Amsterdam"},
+      {"name": "Rembrandt House Museum", "description": "Visit the historic house and studio of the painter Rembrandt.", "location": "Amsterdam"},
       {"name": "Prado Museum", "description": "Spain's main national art museum, located in central Madrid.", "location": "Madrid"},
       {"name": "Vatican Museums", "description": "Home to masterpieces of painting, sculpture.", "location": "Rome"},
       {"name": "The Metropolitan Museum of Art (The Met)", "description": "One of the world's largest and finest art museums.", "location": "New York"}
@@ -38,6 +45,8 @@
       {"name": "Desert Safari with Dune Bashing", "description": "An evening desert safari tour.", "location": "Dubai"},
       {"name": "Vltava River Kayaking", "description": "Kayaking tour through the heart of Prague.", "location": "Prague"},
       {"name": "Helicopter Tour over Manhattan", "description": "See the city from a breathtaking aerial perspective.", "location": "New York"},
+      {"name": "City Biking Tour", "description": "Explore the city's canals and streets like a local on a guided bike tour.", "location": "Amsterdam"},
+      {"name": "A'DAM Lookout Swing", "description": "Swing over the edge of a skyscraper on 'Over the Edge', Europe's highest swing.", "location": "Amsterdam"},
       {"name": "Walk the Brooklyn Bridge", "description": "An iconic walk with fantastic skyline views.", "location": "New York"},
       {"name": "Desert Safari with Dune Bashing", "description": "An evening desert safari tour.", "location": "Dubai"}
     ],
@@ -46,6 +55,8 @@
       {"name": "Grand Bazaar Exploration", "description": "One of the largest and oldest covered markets in the world.", "location": "Istanbul"},
       {"name": "Galleria Vittorio Emanuele II", "description": "Italy's oldest active shopping gallery and a major landmark.", "location": "Milan"},
       {"name": "Le Bon Marché", "description": "The first-ever modern department store.", "location": "Paris"},
+      {"name": "The Nine Streets (De Negen Straatjes)", "description": "A famous area known for its boutique shops, vintage stores, and cozy cafes.", "location": "Amsterdam"},
+      {"name": "Kalverstraat Shopping Street", "description": "The busiest and most commercial shopping street in Amsterdam.", "location": "Amsterdam"},
       {"name": "Oxford Street Spree", "description": "Europe's busiest shopping street, with around half a million daily visitors.", "location": "London"},
       {"name": "Fifth Avenue Shopping", "description": "Explore the famous luxury shops on Fifth Avenue.", "location": "New York"},
       {"name": "Grand Bazaar Exploration", "description": "One of the largest and oldest covered markets in the world.", "location": "Istanbul"} 
