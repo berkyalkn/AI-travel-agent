@@ -1,16 +1,16 @@
 # Your Trip to Milano
 
-A 4-day trip for 2 people, focusing on adventure, food.
+A 6-day trip for 2 people, focusing on adventure, art.
 
 ## ✈️ Flight Information
 - **Airline:** Pegasus Airlines
 - **Origin:** Istanbul (SAW)
-- **Total Price:** €328.82
+- **Total Price:** €325.88
 
 ## 🏨 Hotel Information
-- **Hotel Name:** MiAp ORTI 31
-- **Rating:** 9.6 / 5.0
-- **Total Price for Stay:** €1072.17
+- **Hotel Name:** Aparthotel Meneghino
+- **Rating:** 9.7 / 5.0
+- **Total Price for Stay:** €1175.63
 
 ---
 
@@ -22,16 +22,26 @@ A 4-day trip for 2 people, focusing on adventure, food.
   - Location: Piazza del Duomo
 
 ### Day 2
-- **Afternoon: Wine Tasting**
-  - *Indulge in a wine tasting experience at a local vineyard*
-  - Location: Villa Arcona
+- **Afternoon: Art Gallery Visit**
+  - *Discover local art at a gallery in Milano*
+  - Location: Via della Commenda
 
 ### Day 3
-- **Morning: Explore Galleria Vittorio Emanuele II**
-  - *Walk through the beautiful shopping arcade*
-  - Location: Galleria Vittorio Emanuele II
+- **Morning: Castello Sforzesco Tour**
+  - *Tour the historic castle in Milano*
+  - Location: Piazza Castello
 
 ### Day 4
-- **Afternoon: Visit Castello Sforzesco**
-  - *Discover the historic castle in Milano*
-  - Location: Castello Sforzesco
+- **Evening: Walk along Navigli**
+  - *Explore the charming canals of Milano*
+  - Location: Navigli
+
+### Day 5
+- **Afternoon: Visit Galleria Vittorio Emanuele II**
+  - *Shop and dine at the iconic shopping arcade*
+  - Location: Piazza del Duomo
+
+### Day 6
+- **Full Day: Day Trip to Lake Como**
+  - *Escape to the picturesque lake near Milano*
+  - Location: Lake Como
