@@ -10,37 +10,40 @@ A 4-day trip for 2 people, focusing on food, entertainment.
 ## 🏨 Hotel Information
 - **Hotel Name:** The July - Boat & Co
 - **Rating:** 9.2 / 5.0
-- **Total Price for Stay:** €932.67
+- **Total Price for Stay:** €931.90
 
 ---
 
 ## 🗺️ Daily Itinerary
 
 ### Day 1
-- **Afternoon: Try High Wine**
-  - *Must-try food experience in Amsterdam*
-  - Location: Amsterdam
 - **Morning: Guided Bike Tour of Amsterdam's Highlights and Hidden Gems**
-  - *Explore Amsterdam's highlights and hidden gems*
+  - *Guided bike tour*
+  - Location: Amsterdam
+- **Afternoon: Visit to the Anne Frank House**
+  - *Historical landmark*
   - Location: Amsterdam
 
 ### Day 2
-- **Evening: Eating Amsterdam Tours**
-  - *Food tour in Amsterdam*
+- **Morning: Canal Boat Tour**
+  - *Explore Amsterdam's UNESCO World Heritage canal ring*
   - Location: Amsterdam
-- **Morning: Visit the Rijksmuseum**
-  - *Art museum in Amsterdam*
+- **Afternoon: Visit to the Van Gogh Museum**
+  - *Museum visit*
   - Location: Amsterdam
 
 ### Day 3
-- **Full Day: Day Trip to Zaanse Schans, Edam, Volendam and Marken**
-  - *Day trip from Amsterdam*
-  - Location: Zaanse Schans, Edam, Volendam and Marken
+- **Evening: Food Tour at Albert Cuyp Market**
+  - *Food tour*
+  - Location: Jordaan District, Amsterdam
+- **Afternoon: Visit to the Royal Palace Amsterdam**
+  - *Historical landmark*
+  - Location: Amsterdam
 
 ### Day 4
-- **Morning: Visit the Van Gogh Museum**
-  - *Art museum in Amsterdam*
+- **Evening: Candlelight Concert**
+  - *Musical performance*
   - Location: Amsterdam
-- **Afternoon: Explore Amsterdam's Art Museums**
-  - *Visit Amsterdam's art museums*
+- **Morning: Visit to the Flower Market**
+  - *Market visit*
   - Location: Amsterdam
