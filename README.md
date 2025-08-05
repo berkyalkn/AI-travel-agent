@@ -1,3 +1,4 @@
+
 # Autonomous AI Travel Agent with Self-Correction
 
 An AI travel agent built with LangGraph for cyclical agent orchestration, powered by Groq and Tavily. This project demonstrates a stateful, multi-agent system that can plan, research, write, evaluate, and self-correct to generate a detailed travel itinerary based on a single natural language request.
@@ -6,22 +7,20 @@ An AI travel agent built with LangGraph for cyclical agent orchestration, powere
 
 ## Overview
 
-Planning a trip is a complex task that involves balancing multiple constraints like budget, interests, and time. This project automates the entire process using an autonomous AI agent system. The agent takes a high-level user request (e.g., "a 5-day trip to Rome for 2 people with a €2000 budget, focusing on history") and orchestrates a team of specialized AI agents to produce a complete, logical, and budget-compliant travel plan.
+This project automates the entire travel planning process using an autonomous AI agent system. The agent takes a high-level user request (e.g., "a 5-day trip from Antalya to Rome for 2 people with a €2000 budget, focusing on history") and orchestrates a team of specialized AI agents. It connects to live APIs for flight and hotel data and uses real-time web search for activities to produce a complete, logical, and budget-compliant travel plan.
 
-The core of this project is its ability to not only generate a plan but also to **evaluate its own work and self-correct**, making it a robust and intelligent planning tool.
-
----
+The core of this project is its ability to not only generate a plan but also to evaluate its own work against user constraints and self-correct, making it a robust and truly intelligent planning tool.
 
 ---
 
 ## Features
 
--   **Autonomous End-to-End Planning:** Generates a full itinerary from a single prompt without human intervention.
--   **Multi-Agent Orchestration:** Uses a graph-based approach to manage a team of specialized agents (Planner, Researcher, Critic, etc.) that collaborate to achieve a common goal.
--   **Parallel Task Execution:** Increases efficiency by running independent tasks, like flight and hotel searches, concurrently.
--   **Self-Correction & Budget Control:** A built-in `Evaluator` agent checks the generated plan against user constraints (like budget). If the plan fails, it triggers a refinement loop to find better alternatives.
--   **Data-Driven with Tools:** Agents use tools to gather information from external data sources (simulated via JSON files), making plans grounded in data.
--   **Structured & Formatted Outputs:** Delivers the final plan as a structured Pydantic object and also provides user-friendly, styled `Markdown` and `HTML` reports.
+-   **Autonomous End-to-End Planning:** Generates a complete itinerary from a single natural language prompt.
+- **Live API Integration:** Connects to real-time APIs for flights and hotels, and uses live web search (Tavily) for activities, grounding all plans in current, real-world data.
+-   **Multi-Agent Orchestration:** Uses LangGraph to manage a stateful team of specialized agents (Planner, Researcher, Evaluator, etc.) that collaborate to achieve a goal.
+-   **Parallel Task Execution:**  Efficiently searches for flights and hotels concurrently.
+-   **Intelligent Self-Correction & Multi-Path Refinement:** A built-in Evaluator agent checks the plan against user constraints (e.g., budget). If the plan fails, it intelligently decides whether to refine the flight or the hotel and triggers a revision loop.
+-   **Structured & Formatted Outputs:** Delivers the final plan as both a structured Pydantic object and user-friendly, styled Markdown and HTML reports.
 
 ---
 
@@ -30,34 +29,32 @@ The core of this project is its ability to not only generate a plan but also to 
 The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node represents an agent or a specific function, and edges define the flow of information and control.
 
 
-1.  **Planner Agent:** Parses the user's request into a structured `TripRequest` object.
-2.  **Flight & Hotel Agents:** These agents run **in parallel** to find travel and accommodation options based on the plan.
-3.  **Aggregator:** This node waits for both parallel searches to complete before allowing the process to continue.
-4.  **Activity Planner Agent:** Takes all the gathered information and the user's interests to create a detailed, day-by-day itinerary.
-5.  **Evaluator Agent:** The quality control gate. It checks the complete plan against the user's budget.
-6.  **Conditional Edge (The Loop):** Based on the Evaluator's output, the graph either proceeds to the final step or **loops back** to the `hotel_agent` to find a cheaper option.
-7.  **Report Formatter:** If the plan is approved, this final node creates the `.md` and `.html` report files.
-
+1.  **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
+2. **Parallel Data Gathering (Flight & Hotel Agents):** These agents run in parallel to query live, real-time APIs for the best travel and accommodation options, returning a list of top choices for each. An initial selection is made (e.g., cheapest flight, best-rated hotel).
+3. **Activity Planning Agent:** This agent takes the user's interests, performs live web searches using Tavily to find relevant, specific activities (not just generic tours), and then uses an LLM to analyze the search results and create a structured, day-by-day itinerary.
+4. **Evaluator Agent (The Strategist):** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
+5. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
+6.  **Aggregator:** This node waits for both parallel searches to complete before allowing the process to continue.
+7.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
 ```mermaid
 graph TD
     START --> PlannerAgent
-    PlannerAgent --> FlightAgent
-    PlannerAgent --> HotelAgent
+    PlannerAgent --> FlightAgent & HotelAgent
     
     subgraph "Parallel Search"
-        direction LR
-        FlightAgent
-        HotelAgent
+      FlightAgent
+      HotelAgent
     end
 
-    FlightAgent --> Aggregator
-    HotelAgent --> Aggregator
-    
+    FlightAgent & HotelAgent --> Aggregator
     Aggregator --> ActivityPlanner
     ActivityPlanner --> Evaluator
     
-    Evaluator -- "Plan OK / Budget Met" --> ReportFormatter
-    Evaluator -- "Plan Fails / Over Budget" --> HotelAgent
+    subgraph "Self-Correction Loop"
+        Evaluator -- "Plan OK / Budget Met" --> ReportFormatter
+        Evaluator -- "Refine Hotel" --> HotelAgent
+        Evaluator -- "Refine Flight" --> FlightAgent
+    end
     
     ReportFormatter --> END
 ```
@@ -70,9 +67,11 @@ graph TD
 | :--- | :--- |
 | **Groq** | Ultra-fast Llama 3 inference for all agentic reasoning. |
 | **LangChain** | Core framework for LLM interactions and tool definitions. |
-| **LangGraph** | The star of the show; orchestrates the stateful, multi-agent graph with cycles. |
+| **LangGraph** |  Orchestrates the stateful, multi-agent graph with cycles and parallel execution. |
 | **Pydantic** | Ensures data is structured and reliable throughout the entire workflow. |
-| **Tavily** | Real-time web search capabilities. |
+| **RapidAPI** | Platform for accessing live Flight and Hotel APIs. |
+| **Tavily** | Live web search for finding real-time activity information.  |
+| **Requests** | HTTP library for making API calls. |
 | **markdown2** | Converts the final report from Markdown to HTML. |
 | **Python 3.10+** | The programming language foundation. |
 
@@ -109,62 +108,8 @@ pip install -r requirements.txt
 ```
 GROQ_API_KEY="your_groq_api_key"
 TAVILY_API_KEY="your_tavily_api_key"
+RAPIDAPI_KEY="your_rapid_api_key"
 ```
-
-**5. Verify Mock Data**
-Ensure the `mock_data/` directory exists and contains `flights.json`, `hotels.json`, and `activities.json`.
-
-#### Mock Data Format
-
-1- flights.json
-
-```json
-[
-  {
-    "destination": "New York",
-    "origin": "Istanbul",
-    "airline": "AirExample",
-    "base_price_per_person": 800.0
-  }
-]
-```
-
-2- hotels.json
-
-```json
-[
-  {
-    "destination": "New York",
-    "hotel_name": "Hotel Fancy",
-    "price_per_night_for_two": 300,
-    "rating": 4.5
-  }
-]
-```
-
-3- activities.json
-
-```json
-{
-  "food": [
-    {
-      "name": "Pizza Tour",
-      "description": "Try NYC's famous pizza spots.",
-      "location": "Manhattan",
-      "time_of_day": "Afternoon"
-    }
-  ],
-  "adventure": [
-    {
-      "name": "Central Park Biking",
-      "description": "Bike around Central Park.",
-      "location": "Central Park",
-      "time_of_day": "Morning"
-    }
-  ]
-}
-```
-
 
 ---
 
@@ -196,9 +141,9 @@ Produces:
 ##  Key AI Concepts Demonstrated
 
 This project is a practical implementation of several advanced concepts in AI engineering:
--   **Structured Output:** Forcing LLM outputs into reliable Pydantic schemas.
--   **Tool Binding:** Enabling LLMs to use external functions to gather data.
--   **Parallelization:** Executing multiple independent tasks concurrently to improve efficiency.
--   **Routing & Conditional Logic:** Using conditional edges to dynamically alter the flow of the application based on intermediate results.
--   **Orchestration:** Managing a complex, multi-step process involving multiple specialized agents.
--   **Evaluation & Reflection:** Creating an agent that can critique the output of the system and trigger a self-correction loop.
+-   **Structured Output:** Forcing all LLM outputs, from initial planning (TripRequest) to the final plan (Itinerary) and evaluation (EvaluationResult), into reliable Pydantic schemas to ensure data integrity and predictable workflows.
+-   **Tool Binding & Live API Integration:** Enabling agents to use external functions to gather information from live, real-time APIs (for flights and hotels) and the unstructured web (for activities via Tavily Search).
+-   **Parallelization:** Executing independent data-gathering tasks (flight and hotel searches) concurrently to significantly reduce total execution time.
+-   **Advanced Routing & Conditional Logic:** Using conditional edges to create a multi-path, self-correcting loop. The graph dynamically routes its own execution path back to different agents (hotel_agent or flight_agent) based on the strategic output of the Evaluator agent.
+-   **Stateful Multi-Agent Orchestration:** Using LangGraph to manage a complex, multi-step process where multiple specialized agents collaborate and share information through a persistent state (TripState).
+-   **Evaluation & Reflection:** Creating a dedicated Evaluator agent that critiques the system's own output against user constraints and available alternatives, enabling true autonomous decision-making and refinement.
