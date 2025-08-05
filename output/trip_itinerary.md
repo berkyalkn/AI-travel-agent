@@ -1,59 +1,46 @@
-# Your Trip to Milano
+# Your Trip to Amsterdam
 
-A 6-day trip for 2 people, focusing on adventure, art.
+A 4-day trip for 2 people, focusing on food, entertainment.
 
 ## ✈️ Flight Information
-- **Airline:** Pegasus Airlines
-- **Origin:** Istanbul (SAW)
-- **Total Price:** €314.59
+- **Airline:** KLM
+- **Origin:** Istanbul (IST)
+- **Total Price:** €449.49
 
 ## 🏨 Hotel Information
-- **Hotel Name:** Aparthotel Meneghino
-- **Rating:** 9.7 / 5.0
-- **Total Price for Stay:** €1201.75
+- **Hotel Name:** The July - Boat & Co
+- **Rating:** 9.2 / 5.0
+- **Total Price for Stay:** €932.67
 
 ---
 
 ## 🗺️ Daily Itinerary
 
 ### Day 1
-- **Morning: Milan Duomo & The Last Supper Skip-the-Line Small Group Tour**
-  - *A guided tour of Milan Duomo and The Last Supper*
-  - Location: Milan Duomo
-- **Afternoon: Explore Milan's Canals**
-  - *Discover Milan's system of navigable and interconnected canals*
-  - Location: Milan's Canals
+- **Afternoon: Try High Wine**
+  - *Must-try food experience in Amsterdam*
+  - Location: Amsterdam
+- **Morning: Guided Bike Tour of Amsterdam's Highlights and Hidden Gems**
+  - *Explore Amsterdam's highlights and hidden gems*
+  - Location: Amsterdam
 
 ### Day 2
-- **Morning: 3 Hours of Wonders in Milan (3km Friendly & Easy Walk)**
-  - *A guided walking tour of Milan's wonders*
-  - Location: Milan City Center
-- **Afternoon: Visit the Museum of Ancient Art**
-  - *Explore the Museum of Ancient Art*
-  - Location: Museum of Ancient Art
+- **Evening: Eating Amsterdam Tours**
+  - *Food tour in Amsterdam*
+  - Location: Amsterdam
+- **Morning: Visit the Rijksmuseum**
+  - *Art museum in Amsterdam*
+  - Location: Amsterdam
 
 ### Day 3
-- **Morning: Milan Half Day Tour with a Local Guide**
-  - *A half-day tour of Milan with a local guide*
-  - Location: Milan City Center
-- **Afternoon: Visit the Egyptian Museum**
-  - *Explore the Egyptian Museum*
-  - Location: Egyptian Museum
+- **Full Day: Day Trip to Zaanse Schans, Edam, Volendam and Marken**
+  - *Day trip from Amsterdam*
+  - Location: Zaanse Schans, Edam, Volendam and Marken
 
 ### Day 4
-- **Full Day: Venice Full-Day Guided Tour From Milan**
-  - *A full-day guided tour of Venice from Milan*
-  - Location: Venice
-
-### Day 5
-- **Morning: Visit the Museum of Musical Instruments**
-  - *Explore the Museum of Musical Instruments*
-  - Location: Museum of Musical Instruments
-- **Afternoon: Explore Milan's Cortili**
-  - *Discover Milan's courtyards (cortili)*
-  - Location: Milan's Cortili
-
-### Day 6
-- **Morning: 3 Hours of Wonders in Milan (3km Friendly & Easy Walk)**
-  - *A guided walking tour of Milan's wonders*
-  - Location: Milan City Center
+- **Morning: Visit the Van Gogh Museum**
+  - *Art museum in Amsterdam*
+  - Location: Amsterdam
+- **Afternoon: Explore Amsterdam's Art Museums**
+  - *Visit Amsterdam's art museums*
+  - Location: Amsterdam
