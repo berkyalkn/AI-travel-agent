@@ -3,9 +3,9 @@
 A 4-day trip for 2 people, focusing on food, entertainment.
 
 ## ✈️ Flight Information
-- **Airline:** KLM
-- **Origin:** Istanbul (IST)
-- **Total Price:** €448.72
+- **Airline:** AJET
+- **Origin:** Istanbul (SAW)
+- **Total Price:** €438.87
 
 ## 🏨 Hotel Information
 - **Hotel Name:** The July - Boat & Co
@@ -20,13 +20,13 @@ A 4-day trip for 2 people, focusing on food, entertainment.
 - **Any: The Pantry**
   - *Restaurant*
   - Location: Amsterdam
-- **Afternoon: Anne Frank House**
-  - *Museum*
+- **Any: Senses Restaurant**
+  - *Restaurant*
   - Location: Amsterdam
 
 ### Day 2
-- **Any: Senses Restaurant**
-  - *Restaurant*
+- **Afternoon: Anne Frank House**
+  - *Museum*
   - Location: Amsterdam
 - **Afternoon: Van Gogh Museum**
   - *Museum*
