@@ -17,10 +17,10 @@ The core of this project is its ability to not only generate a plan but also to 
 
 -   **Autonomous End-to-End Planning:** Generates a complete itinerary from a single natural language prompt.
 - **Live API Integration:** Connects to real-time APIs for flights and hotels, and uses live web search (Tavily) for activities, grounding all plans in current, real-world data.
--   **Multi-Agent Orchestration:** Uses LangGraph to manage a stateful team of specialized agents (Planner, Researcher, Evaluator, etc.) that collaborate to achieve a goal.
--   **Parallel Task Execution:**  Efficiently searches for flights and hotels concurrently.
--   **Intelligent Self-Correction & Multi-Path Refinement:** A built-in Evaluator agent checks the plan against user constraints (e.g., budget). If the plan fails, it intelligently decides whether to refine the flight or the hotel and triggers a revision loop.
--   **Structured & Formatted Outputs:** Delivers the final plan as both a structured Pydantic object and user-friendly, styled Markdown and HTML reports.
+-   **Multi-Agent Orchestration:** Uses LangGraph to manage a stateful team of specialized agents (Planner, Researcher, Evaluator, etc.) that collaborate and share state to achieve a complex goal.
+-   **Parallel Task Execution:**  Efficiently searches for flights and hotels concurrently to reduce planning time.
+-   **Intelligent Self-Correction & Multi-Path Refinement:** A built-in Evaluator agent checks the plan against user constraints (e.g., budget). If the plan fails, it strategically decides whether to refine the flight or the hotel and triggers a targeted revision loop. The system intelligently selects the next-best option from the available choices in each loop.
+-   **Robust & Formatted Outputs:** Delivers the final plan as both a structured Pydantic object and user-friendly, styled Markdown and HTML reports.
 
 ---
 
@@ -30,11 +30,11 @@ The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node
 
 
 1.  **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
-2. **Parallel Data Gathering (Flight & Hotel Agents):** These agents run in parallel to query live, real-time APIs for the best travel and accommodation options, returning a list of top choices for each. An initial selection is made (e.g., cheapest flight, best-rated hotel).
-3. **Activity Planning Agent:** This agent takes the user's interests, performs live web searches using Tavily to find relevant, specific activities (not just generic tours), and then uses an LLM to analyze the search results and create a structured, day-by-day itinerary.
-4. **Evaluator Agent (The Strategist):** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
-5. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
-6.  **Aggregator:** This node waits for both parallel searches to complete before allowing the process to continue.
+2. **Parallel Data Gathering (Flight & Hotel Agents):** These agents run concurrently. They query live APIs for all possible flight and hotel options and use an LLM to make an initial selection based on a balance of cost and quality.
+3. **Activity Extraction Agent:** Takes the user's interests, performs live web searches using Tavily, and uses a robust LLM pipeline to parse the raw search results into a structured list of Activity objects.
+4. **Activity Scheduling Agent:** In a separate, focused step, this agent takes the structured list of activities and uses an LLM to organize them into a logical, day-by-day DailyPlan. This separation makes the process more reliable.
+5. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
+6. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
 7.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
 ```mermaid
 graph TD
@@ -46,12 +46,12 @@ graph TD
       HotelAgent
     end
 
-    FlightAgent & HotelAgent --> Aggregator
-    Aggregator --> ActivityPlanner
-    ActivityPlanner --> Evaluator
+    FlightAgent & HotelAgent --> ActivityExtractionAgent
+    ActivityExtractionAgent --> ActivitySchedulingAgent
+    ActivitySchedulingAgent --> Evaluator
     
     subgraph "Self-Correction Loop"
-        Evaluator -- "Plan OK / Budget Met" --> ReportFormatter
+        Evaluator -- "Plan OK / Max Retries" --> ReportFormatter
         Evaluator -- "Refine Hotel" --> HotelAgent
         Evaluator -- "Refine Flight" --> FlightAgent
     end
@@ -74,6 +74,7 @@ graph TD
 | **Requests** | HTTP library for making API calls. |
 | **markdown2** | Converts the final report from Markdown to HTML. |
 | **Python 3.10+** | The programming language foundation. |
+| **Jupyter / IPython**| Environment for developing, testing and running the agent|
 
 
 ---
@@ -116,10 +117,11 @@ RAPIDAPI_KEY="your_rapid_api_key"
 ## How to Run
 
 1.  Open the main Jupyter Notebook (`travel_agent.ipynb`).
-2.  Navigate to the last cell of the notebook.
+2.  Navigate to the final cell of the notebook.
 3.  Modify the `user_query` variable to define the trip you want to plan.
-4.  Run all the cells.
-5.  The final report will be displayed in the notebook and saved in the `output/` directory as `trip_itinerary.md` and `trip_itinerary.html`.
+4.  Run all the cells in the notebook.
+
+5. The agent's progress will be printed in the output. The final report will be displayed in the notebook and saved to the `output/` directory as `trip_itinerary.md` and `trip_itinerary.html`
 
 
 #### Example Query
