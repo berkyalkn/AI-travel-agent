@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import './App.css'; // Stil dosyamızı import ediyoruz
+import './App.css';
 
 function App() {
   const [query, setQuery] = useState('');
