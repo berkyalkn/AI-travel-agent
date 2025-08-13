@@ -55,14 +55,14 @@ graph TD
             C(Planner Agent)
             D{Flight Agent}
             E{Hotel Agent}
-            F(Activity Extraction Agent)
-            G(Activity Scheduling Agent)
+            F(Activity Extraction)
+            G(Activity Scheduling)
             H(Evaluator Agent)
-            I(Report Formatter Agent)
+            I(Report Formatter)
         end
     end
 
-   
+    
     A -- "POST Request with user_query" --> B
     B -- "Invokes Agent" --> C
     C --> D & E
@@ -70,14 +70,9 @@ graph TD
     E --> F
     F --> G
     G --> H
-
-   
-    subgraph "Self-Correction Loop"
-        H -- "Refine Hotel" --> E
-        H -- "Refine Flight" --> D
-        H -- "Plan OK / Max Retries" --> I
-    end
-
+    H -- "Refine Hotel" --> E
+    H -- "Refine Flight" --> D
+    H -- "Plan OK / Max Retries" --> I
     I -- "Markdown Report" --> B
     B -- "JSON Response with Report" --> A
  ```
