@@ -6,23 +6,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from agent import app as travel_agent_app
 
 
-origins = [
-    "http://localhost:5173", 
-    "http://localhost:3000", 
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"], 
-)
-
-
 app = FastAPI(
     title="AI Travel Agent API",
     description="An API to generate travel itineraries using a multi-agent system."
+)
+
+
+origin = "http://localhost:5173", 
+     
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origin,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"], 
 )
 
 class PlanRequest(BaseModel):
