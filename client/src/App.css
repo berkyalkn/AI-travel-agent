@@ -1,8 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 :root {
-  --primary-color: #5a67d8; 
-  --primary-hover: #434190;
+  
+  --primary-color: #3b82f6; 
+  --primary-hover: #2563eb; 
   --background-color: #f7fafc; 
   --text-color: #2d3748;
   --text-light: #718096;
@@ -28,7 +29,9 @@
   width: 100%;
   background-color: var(--container-bg);
   border-radius: 16px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  padding: 0;
+  overflow: visible;
 }
 
 .App-header {
@@ -209,3 +212,46 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.3) !important;
 }
 
+.gradient-header {
+  padding: 3rem 2.5rem;
+  text-align: center;
+  color: white;
+  background: linear-gradient(135deg, #2dd4bf 0%, #3b82f6 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+.gradient-header .title-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.gradient-header .plane-icon {
+  font-size: 2.2rem; 
+  color: white;
+  margin-bottom: 5px;
+}
+
+.gradient-header h1 {
+  margin: 0;
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+}
+
+.gradient-header p {
+  color: rgba(255, 255, 255, 0.85); 
+  font-size: 1.1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.decorative-line {
+  height: 3px;
+  width: 80px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+  margin: 0 auto; 
+}
