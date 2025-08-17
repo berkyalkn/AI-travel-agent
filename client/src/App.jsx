@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import axios from 'axios';
-import ReactMarkdown from 'react-markdown';
 import './App.css';
+
+import Header from './components/Header';
+import InputForm from './components/InputForm';
+import ReportDisplay from './components/ReportDisplay';
 
 function App() {
   const [query, setQuery] = useState('');
@@ -9,7 +12,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
- 
   const API_URL = 'http://127.0.0.1:8000/plan-trip';
 
   const handlePlanTrip = async () => {
@@ -23,11 +25,7 @@ function App() {
     setReport('');
 
     try {
-      
-      const response = await axios.post(API_URL, {
-        user_query: query
-      });
-
+      const response = await axios.post(API_URL, { user_query: query });
       if (response.data.report) {
         setReport(response.data.report);
       } else if (response.data.error) {
@@ -35,7 +33,6 @@ function App() {
       } else {
         setError('An unknown error occurred. The report could not be generated.');
       }
-
     } catch (err) {
       console.error(err);
       setError('Failed to connect to the backend server. Please ensure the server is running.');
@@ -46,35 +43,20 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div className="title-container">
-          <h1>AI Travel Agent</h1>
-          <span className="plane-icon">✈️</span>
-        </div>
-        <p>Describe your trip, and I'll create a detailed itinerary for you.</p>
-        <div className="input-area">
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g., Plan a 5-day trip to Tokyo for 2 people in March. We love food, technology, and temples. Our budget is around 3000 euros."
-            rows={6}
-            disabled={isLoading}
-          />
-          <button onClick={handlePlanTrip} disabled={isLoading}>
-            {isLoading ? 'Planning Your Trip...' : 'Plan My Trip'}
-          </button>
-        </div>
-      </header>
-      
-      <main className="report-container">
-        {error && <div className="error-box">{error}</div>}
-        {isLoading && <div className="loading-spinner"></div>}
-        {report && (
-          <div className="markdown-content">
-            <ReactMarkdown>{report}</ReactMarkdown>
-          </div>
-        )}
-      </main>
+      <div className="main-container">
+        <Header />
+        <InputForm 
+          query={query}
+          setQuery={setQuery}
+          handlePlanTrip={handlePlanTrip}
+          isLoading={isLoading}
+        />
+        <ReportDisplay 
+          isLoading={isLoading}
+          error={error}
+          report={report}
+        />
+      </div>
     </div>
   );
 }
