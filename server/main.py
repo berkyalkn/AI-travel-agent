@@ -1,4 +1,3 @@
-# server/main.py
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,19 +30,30 @@ def read_root():
 
 @app.post("/plan-trip")
 async def plan_trip(request: PlanRequest):
-    """
-    Takes a user query and returns a generated travel plan.
-    """
     try:
         print(f"Received request for query: {request.user_query}")
         initial_state = {"user_request": request.user_query}
-
         final_state = travel_agent_app.invoke(initial_state)
-
-        report = final_state.get("markdown_report", "No report was generated.")
-
-        return {"report": report}
+        
+        itinerary = final_state.get("final_itinerary")
+        
+        if itinerary:
+            response_data = itinerary.model_dump()
+            response_data["evaluation_result"] = final_state.get("evaluation_result").model_dump()
+            return response_data
+        else:
+            return {"error": "A complete plan could not be generated with the provided details. Please try modifying your request."}
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-        return {"error": str(e)}
+        print(f"AN ERROR OCCURRED: {e}")        
+        error_str = str(e).lower()
+        
+        if "tool call validation failed" in error_str or "400" in error_str:
+            user_friendly_error = "I couldn't understand the details of your request. Please ensure all fields are filled clearly (especially dates) and try again."
+            return {"error": user_friendly_error}
+        
+        if "service unavailable" in error_str or "503" in error_str:
+            user_friendly_error = "The AI service is currently experiencing high traffic. Please try again in a moment."
+            return {"error": user_friendly_error}
+
+        return {"error": "An unexpected error occurred while planning your trip. Please try again later."}
