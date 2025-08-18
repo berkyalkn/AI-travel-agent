@@ -28,10 +28,16 @@
   max-width: 800px;
   width: 100%;
   background-color: var(--container-bg);
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  border-radius: 20px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   padding: 0;
   overflow: visible;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.main-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .App-header {
@@ -254,4 +260,11 @@ button:disabled {
   background-color: rgba(255, 255, 255, 0.9);
   border-radius: 2px;
   margin: 0 auto; 
+}
+
+.loading-button-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px; 
 }
