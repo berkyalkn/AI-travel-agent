@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { FaPlaneDeparture } from "react-icons/fa";
 
 function InputForm({ formData, setFormData, handlePlanTrip, isLoading, errors }) {
   
@@ -46,9 +48,32 @@ function InputForm({ formData, setFormData, handlePlanTrip, isLoading, errors })
       
     
       <div className="form-submit-area">
-        <button onClick={handlePlanTrip} disabled={isLoading}>
-          {isLoading ? 'Planning Your Trip...' : 'Plan My Trip'}
-        </button>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.05 }}
+          disabled={isLoading}
+          onClick={handlePlanTrip}
+          className="plan-button" 
+        >
+          {isLoading ? (
+            <motion.div
+              initial={{ y: 0 }}
+              animate={{ y: -5 }} 
+              transition={{
+                repeat: Infinity,
+                repeatType: "reverse",
+                duration: 0.5,
+                ease: "easeInOut"
+              }}
+              className="loading-button-content"
+            >
+              <FaPlaneDeparture />
+              <span>Taking off...</span>
+            </motion.div>
+          ) : (
+            "Plan My Trip"
+          )}
+        </motion.button>
       </div>
     </div>
   );
