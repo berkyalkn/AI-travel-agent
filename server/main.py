@@ -35,14 +35,12 @@ async def plan_trip(request: PlanRequest):
         initial_state = {"user_request": request.user_query}
         final_state = travel_agent_app.invoke(initial_state)
         
-        itinerary = final_state.get("final_itinerary")
+        final_report_markdown = final_state.get("markdown_report")
         
-        if itinerary:
-            response_data = itinerary.model_dump()
-            response_data["evaluation_result"] = final_state.get("evaluation_result").model_dump()
-            return response_data
+        if final_report_markdown:
+            return {"report": final_report_markdown}
         else:
-            return {"error": "A complete plan could not be generated with the provided details. Please try modifying your request."}
+            return {"error": "Failed to generate the final report markdown."}
 
     except Exception as e:
         print(f"AN ERROR OCCURRED: {e}")        
