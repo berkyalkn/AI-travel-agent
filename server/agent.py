@@ -26,7 +26,10 @@ if not all([groq_api_key, tavily_api_key, rapidapi_key]):
     raise ValueError("One or more required API keys are missing from the .env file!")
 
 
-llm = ChatGroq(model="llama3-70b-8192", api_key = groq_api_key, max_retries=3)
+#llm = ChatGroq(model="llama-3.3-70b-versatile", api_key = groq_api_key, max_retries=3)
+
+llm = ChatGroq(model="llama-3.1-8b-instant", api_key = groq_api_key, max_retries=3)
+
 
 class TripRequest(BaseModel) :
     """Schema for user's travel requests."""
