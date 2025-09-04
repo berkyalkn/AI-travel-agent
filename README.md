@@ -22,7 +22,7 @@ The core of this project is its robust, decoupled architecture and its ability t
 -   **Multi-Agent Orchestration:** Uses LangGraph to manage a stateful team of specialized agents (Planner, Researcher, Evaluator, etc.) that collaborate and share state to achieve a complex goal.
 -   **Parallel Task Execution:**  Efficiently searches for flights and hotels concurrently to reduce planning time.
 -   **Intelligent Self-Correction & Multi-Path Refinement:** A built-in Evaluator agent checks the plan against user constraints (e.g., budget). If the plan fails, it strategically decides whether to refine the flight or the hotel and triggers a targeted revision loop. The system intelligently selects the next-best option from the available choices in each loop.
--   **Robust & Formatted Outputs:** Delivers the final plan as both a structured Pydantic object and user-friendly, styled Markdown and HTML reports.
+-  **Detailed & User-Friendly Itinerary:** Delivers the final plan as a rich Markdown report, featuring a budget summary, detailed flight tables (including times, flight numbers, aircraft types, and layovers), hotel information, and a day-by-day activity schedule.
 
 ---
 
@@ -206,3 +206,14 @@ This project is a practical implementation of several advanced concepts in AI en
 -   **Advanced Routing & Conditional Logic:** Using conditional edges to create a multi-path, self-correcting loop. The graph dynamically routes its own execution path back to different agents (hotel_agent or flight_agent) based on the strategic output of the Evaluator agent.
 -   **Stateful Multi-Agent Orchestration:** Using LangGraph to manage a complex, multi-step process where multiple specialized agents collaborate and share information through a persistent state (TripState).
 -   **Evaluation & Reflection:** Creating a dedicated Evaluator agent that critiques the system's own output against user constraints and available alternatives, enabling true autonomous decision-making and refinement.
+-   **Intent Parsing & Slot Filling:** The initial `Planner Agent` acts as a classic Natural Language Understanding (NLU) component. It parses the user's intent (planning a trip) and fills the necessary "slots" (`destination`, `budget`, `dates`) to create a structured request for the downstream agents.
+-   **AI-driven Reflection (Self-Critique):** The `Evaluator Agent` is a practical implementation of AI reflection. It critiques the generated plan against a set of rules (the user's constraints), mirroring advanced concepts like Constitutional AI where a system uses principles to judge and refine its own outputs, leading to more reliable and aligned results.
+
+### What You Get
+
+After processing, the application renders a complete and detailed travel plan directly in the user interface, which includes:
+
+-   **A Budget Summary:** A clear breakdown of the total estimated cost versus the user's budget, including a cost-per-person calculation.
+-   **Detailed Flight Information:** A table-formatted view of the selected flights, including departure/arrival times, airports, flight numbers, aircraft types, and layover details.
+-   **Curated Hotel Selection:** The chosen hotel with its rating and total price for the stay.
+-   **A Day-by-Day Itinerary:** A logical schedule of activities and experiences tailored to the user's interests, with actual dates for each day.
