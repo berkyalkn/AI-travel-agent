@@ -44,3 +44,5 @@ Thumbs.db
 
 # --- Log Files ---
 *.log
+
+agent_dev.ipynb
