@@ -1,92 +1,76 @@
-# Your Trip to Amsterdam
+# Your Trip to Amsterdam (September 25, 2025 - September 28, 2025)
 
 ## 📊 Budget Summary
-- **Your Budget:** €6,600.00
-- **Total Estimated Cost:** €1,936.81
-- **Status:** ✅ Congratulations! Your plan is **€4,663.19 under budget**.
+- **Your Budget:** €1,500.00
+- **Total Estimated Cost:** €1,335.24
+- **Estimated Cost Per Person:** €667.62
+- **Status:** ✅ Congratulations! Your plan is **€164.76 under budget**.
 
-A 5-day trip for 3 people, focused on food, art.
+A 4-day trip for 2 people, focused on food, entertainment.
 
 ## ✈️ Flight Information
-- **Airline:** Pegasus Airlines
-- **Departure:** Istanbul (SAW)
-- **Total Price:** €656.81
+**Airline:** Pegasus Airlines
+**Total Price (for 2 people):** €421.56
+
+|  | Time | Details | Airport |
+|:---|:---|:---|:---|
+| **Depart**<br>*September 25, 2025* | **02:40 PM** | 🛫 **PC1257**  | **Istanbul Sabiha Gokcen International Airport (SAW)** |
+| | *3h 40m* | Total Journey | |
+| | **05:20 PM** | 🛬 Arriving At | **Schiphol Airport (AMS)** |
+| | | | |
+| **Return**<br>*September 28, 2025* | **07:55 PM** | 🛫 **PC7348**  | **Schiphol Airport (AMS)** |
+| | *3h 30m* | Total Journey | |
+| | **12:25 AM** | 🛬 Arriving At | **Istanbul Sabiha Gokcen International Airport (SAW)** |
 
 ## 🏨 Hotel Information
-- **Hotel Name:** B&B Modern Times
-- **Rating:** 9.6 / 10.0
-- **Total Accommodation Price:** €1,280.00
+- **Hotel Name:** The July - Boat & Co
+- **Rating:** 9.2 / 10.0
+- **Total Price (for 3 nights, 2 people):** €913.68
 
 ---
 
 ## 🗺️ Daily Itinerary
 
-### Day 1
-- **Anytime: Visit the Albert Cuyp Market**
-  - *A popular outdoor market in De Pijp offering a wide range of food choices*
+### Day 1 - September 25, 2025
+- **Morning: Rijksmuseum**
+  - *A museum home to a vast collection of Dutch art and history*
   - Location: Amsterdam
-- **Anytime: Eat at Restaurant Hap Hmm**
-  - *A restaurant known for their delicious offerings*
+- **Afternoon: Albert Cuyp Market**
+  - *A market offering a wide range of food choices*
   - Location: Amsterdam
-- **Anytime: Eat at Sari Citra**
-  - *A notable eatery at the Albert Cuyp Market*
-  - Location: Amsterdam
-- **Anytime: Eat at Bazaar**
-  - *A notable eatery at the Albert Cuyp Market*
+- **Evening: Sari Citra**
+  - *A notable eatery*
   - Location: Amsterdam
 
-### Day 2
-- **Anytime: Visit the Rijksmuseum**
-  - *One of the most famous museums in Amsterdam, home to a vast collection of Dutch art and history*
+### Day 2 - September 26, 2025
+- **Morning: Van Gogh Museum**
+  - *A museum showcasing the works of Van Gogh*
   - Location: Amsterdam
-- **Anytime: Visit Foodhallen**
-  - *A popular indoor food market in the Oud-West neighbourhood*
+- **Afternoon: Foodhallen**
+  - *A popular indoor food market*
   - Location: Amsterdam
-- **Anytime: Buy warm stroopwafels at Rudi's**
-  - *A popular spot for stroopwafels*
-  - Location: Amsterdam
-- **Anytime: Take a canal boat tour**
-  - *Explore the city's UNESCO World Heritage canal ring*
+- **Evening: Bazaar**
+  - *A notable eatery*
   - Location: Amsterdam
 
-### Day 3
-- **Anytime: Visit the Van Gogh Museum**
-  - *A museum showcasing the works and life of Vincent van Gogh*
-  - Location: Amsterdam
-- **Anytime: Visit the Cheese Museum**
-  - *A museum offering an interactive experience on the history of Dutch cheese-making*
-  - Location: Amsterdam
-- **Anytime: Visit the Upstairs Pannenkoekenhuis**
+### Day 3 - September 27, 2025
+- **Morning: Upstairs Pannenkoekenhuis**
   - *A restaurant serving plate-sized pancakes*
   - Location: Amsterdam
-- **Anytime: Visit the Flower Market**
-  - *A market selling flowers and other items*
+- **Afternoon: The Cheese Museum**
+  - *A museum offering an interactive experience of Dutch cheese-making*
+  - Location: Amsterdam
+- **Evening: Restaurant Hap Hmm**
+  - *A restaurant known for its delicious offerings*
   - Location: Amsterdam
 
-### Day 4
-- **Anytime: Visit the Stedelijk Museum**
-  - *A museum showcasing modern and contemporary art*
+### Day 4 - September 28, 2025
+- **Morning: Royal Palace**
+  - *A palace that can be visited with tickets*
   - Location: Amsterdam
-- **Anytime: Visit the Anne Frank House**
-  - *A museum dedicated to the Jewish girl who wrote a diary during WWII*
+- **Afternoon: Dam Square**
+  - *Amsterdam's most famous square*
   - Location: Amsterdam
-- **Anytime: Visit the Rembrandt House**
-  - *A museum showcasing the life and works of Rembrandt*
-  - Location: Amsterdam
-- **Anytime: Eat at Restaurant Hap Hmm**
-  - *A restaurant known for their delicious offerings*
-  - Location: Amsterdam
-
-### Day 5
-- **Anytime: Visit the Flower Market**
-  - *A market selling flowers and other items*
-  - Location: Amsterdam
-- **Anytime: Visit the Cheese Museum**
-  - *A museum offering an interactive experience on the history of Dutch cheese-making*
-  - Location: Amsterdam
-- **Anytime: Visit the Upstairs Pannenkoekenhuis**
-  - *A restaurant serving plate-sized pancakes*
-  - Location: Amsterdam
-- **Anytime: Stay at Hotel The Craftsmen**
-  - *A boutique hotel with views of the bustling streets*
+- **Afternoon: Rudi's**
+  - *A place serving warm stroopwafels*
   - Location: Amsterdam
