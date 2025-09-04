@@ -26,9 +26,7 @@ if not all([groq_api_key, tavily_api_key, rapidapi_key]):
     raise ValueError("One or more required API keys are missing from the .env file!")
 
 
-#llm = ChatGroq(model="llama-3.3-70b-versatile", api_key = groq_api_key, max_retries=3)
-
-llm = ChatGroq(model="llama-3.1-8b-instant", api_key = groq_api_key, max_retries=3)
+llm = ChatGroq(model="llama-3.3-70b-versatile", api_key = groq_api_key, max_retries=3)
 
 
 class TripRequest(BaseModel) :
@@ -48,13 +46,27 @@ class TripRequest(BaseModel) :
         return (end - start).days + 1
 
 
-class FlightInfo(BaseModel) :
-    """Schema for flight information"""
-    airline : str = Field(description= "The name of the airline")
-    price : float = Field(description= "The price of the round-trip flight")
-    origin : str = Field(description= "The departure city")
-    destination : str = Field(description= "The arrival city")
-    duration_minutes: int = Field(description="The total duration of the flight in minutes.") 
+class FlightLeg(BaseModel):
+    """Schema for a single leg of a flight (either departure or return)."""
+    departure_time: str = Field(description="Departure time in HH:MM format.")
+    arrival_time: str = Field(description="Arrival time in HH:MM format.")
+    departure_airport: str = Field(description="Full name and IATA code of the departure airport.")
+    arrival_airport: str = Field(description="Full name and IATA code of the arrival airport.")
+    duration_minutes: int = Field(description="Duration of this specific leg in minutes.")
+    airline: str = Field(description="The name of the airline for this leg.")
+    flight_number: str = Field(description="The flight number, e.g., 'TK1857'.")
+    aircraft_type: str = Field(description="The type of aircraft, e.g., 'Boeing 737'.")
+    is_layover: bool = Field(default=False, description="True if this journey has a layover.")
+    layover_airport: Optional[str] = Field(default=None, description="The airport where the layover occurs.")
+    layover_duration_minutes: Optional[int] = Field(default=None, description="The duration of the layover in minutes.")
+
+
+class FlightInfo(BaseModel):
+    """Schema for flight information, now with detailed legs."""
+    price: float = Field(description="The total price of the round-trip flight for all passengers.")
+    departure_leg: FlightLeg
+    return_leg: FlightLeg
+    total_duration_minutes: int = Field(description="The total round-trip duration in minutes.")
 
 
 class FlightSelection(BaseModel):
@@ -172,70 +184,119 @@ def iata_finder_tool(city_name: str) -> List[str]:
 @tool
 def flight_search_tool(origin_iata_list: List[str], destination_iata_list: List[str], start_date: str, end_date: str, person: int, origin_city: str, destination_city: str) -> List[FlightInfo]:
     """
-    Searches for flights for all given airport IATA codes and returns a sorted list of options.
+    Searches for flights and robustly extracts detailed leg information from the complex API response structure.
     """
-
     print(f"--- Calling REAL Flight API for {origin_iata_list} -> {destination_iata_list} ---")
-
     all_flight_options = []
+
+
+    def _parse_journey_segment(segment: dict) -> Optional[FlightLeg]:
+        try:
+            legs = segment.get('legs', [])
+            if not legs: return None
+            
+            departure_airport_info = segment.get('departureAirport')
+            arrival_airport_info = segment.get('arrivalAirport')
+            total_duration_minutes = segment.get('totalTime', 0) // 60
+            
+            first_leg_data = legs[0]
+            last_leg_data = legs[-1]
+
+            departure_at_str = first_leg_data.get('departureTime')
+            arrival_at_str = last_leg_data.get('arrivalTime')
+            carrier_data = first_leg_data.get('carriersData', [{}])[0]
+            flight_info = first_leg_data.get('flightInfo', {})
+            flight_number = flight_info.get('flightNumber', '')
+            aircraft_type = segment.get('aircraftType', '') 
+
+            if not all([departure_at_str, arrival_at_str, departure_airport_info, arrival_airport_info, carrier_data]):
+                return None
+
+            departure_time = datetime.fromisoformat(departure_at_str).strftime('%I:%M %p')
+            arrival_time = datetime.fromisoformat(arrival_at_str).strftime('%I:%M %p')
+            departure_airport = f"{departure_airport_info.get('name')} ({departure_airport_info.get('code')})"
+            arrival_airport = f"{arrival_airport_info.get('name')} ({arrival_airport_info.get('code')})"
+            airline = carrier_data.get('name', 'Unknown Airline')
+
+            is_layover = len(legs) > 1
+            layover_airport = None
+            layover_duration_minutes = None
+
+            if is_layover:
+
+                layover_airport_info = first_leg_data.get('arrivalAirport')
+                layover_airport = f"{layover_airport_info.get('name')} ({layover_airport_info.get('code')})"
+                
+                first_leg_arrival = datetime.fromisoformat(first_leg_data.get('arrivalTime'))
+                second_leg_departure = datetime.fromisoformat(legs[1].get('departureTime'))
+                layover_duration_minutes = int((second_leg_departure - first_leg_arrival).total_seconds() / 60)
+
+            return FlightLeg(
+                departure_time=departure_time, arrival_time=arrival_time,
+                departure_airport=departure_airport, arrival_airport=arrival_airport,
+                duration_minutes=total_duration_minutes,
+                airline=airline,
+                flight_number=f"{carrier_data.get('code', '')}{flight_number}",
+                aircraft_type=aircraft_type,
+                is_layover=is_layover,
+                layover_airport=layover_airport,
+                layover_duration_minutes=layover_duration_minutes
+            )
+        except Exception as e:
+            print(f"      -> Warning: Skipping a journey segment due to a parsing error: {e}")
+            return None
+
 
     for origin_iata in origin_iata_list:
         for destination_iata in destination_iata_list:
-
             print(f"-> Searching flights from {origin_iata} to {destination_iata}...")
 
             url = "https://booking-com18.p.rapidapi.com/flights/v2/search-roundtrip"
-
             querystring = {
                 "departId": origin_iata, "arrivalId": destination_iata, "departDate": start_date,
                 "returnDate": end_date, "adults": str(person), "sort": "CHEAPEST", "currency_code": "EUR"
             }
-
-            headers = {
-                "x-rapidapi-key": os.getenv("RAPIDAPI_KEY"),
-                "x-rapidapi-host": "booking-com18.p.rapidapi.com"
-            }
+            headers = { "x-rapidapi-key": os.getenv("RAPIDAPI_KEY"), "x-rapidapi-host": "booking-com18.p.rapidapi.com" }
 
             try:
                 response = requests.get(url, headers=headers, params=querystring)
                 response.raise_for_status()
                 data = response.json()
 
-                if data.get('data') and data['data'].get('flightOffers'):
-                    for flight_offer in data['data']['flightOffers']:
+                offers = data.get('data', {}).get('flightOffers', []) or data.get('data', {}).get('flights', [])
 
-                        price_info = flight_offer['priceBreakdown']['total']
-                        total_price = price_info.get('units', 0) + price_info.get('nanos', 0) / 1_000_000_000
-                        airline = flight_offer['segments'][0]['legs'][0]['carriersData'][0]['name']
-                        duration_seconds_outbound = flight_offer['segments'][0].get('totalTime', 0)
-                        duration_seconds_return = flight_offer['segments'][1].get('totalTime', 0)
-                        total_duration_minutes = (duration_seconds_outbound + duration_seconds_return) // 60
-                
-                        all_flight_options.append(FlightInfo(
-                            airline=airline,
-                            price=total_price,
-                            origin=f"{origin_city} ({origin_iata})", 
-                            destination=destination_city,
-                            duration_minutes=total_duration_minutes
-                        ))
+                for offer in offers:
+                    price_info = offer.get('priceBreakdown', {}).get('total', {})
+                    total_price = price_info.get('units', 0) + price_info.get('nanos', 0) / 1e9
 
-            except requests.exceptions.RequestException as e:
+                    segments = offer.get('segments')
+                    if not segments or len(segments) < 2: continue
 
+                    departure_leg = _parse_journey_segment(segments[0])
+                    return_leg = _parse_journey_segment(segments[1])
+                    
+                    if not departure_leg or not return_leg:
+                        continue
+                    
+                    total_duration = departure_leg.duration_minutes + return_leg.duration_minutes
+
+                    all_flight_options.append(FlightInfo(
+                        price=total_price,
+                        departure_leg=departure_leg,
+                        return_leg=return_leg,
+                        total_duration_minutes=total_duration
+                    ))
+            except Exception as e:
                 print(f"-> API request failed for {origin_iata} -> {destination_iata}: {e}")
                 continue
 
     if not all_flight_options:
-        print("-> No flights found for any airport combinations.")
+        print("-> No valid flights parsed from the response.")
         return []
 
     all_flight_options.sort(key=lambda x: x.price)
-
-    print(f"-> Found a total of {len(all_flight_options)} flights. Returning the top 5 cheapest.")
-
+    print(f"-> Found and successfully parsed {len(all_flight_options)} valid flights. Returning the top 5 cheapest.")
     return all_flight_options[:5]
-
-
-
 
 
 @tool
@@ -264,7 +325,6 @@ def location_id_finder_tool(city_name: str) -> Optional[str]:
     except (KeyError, TypeError, ValueError) as e:
         print(f"-> Error processing location ID data: {e}")
         return None
-
 
 @tool
 def hotel_search_tool(location_id: str, start_date: str, end_date: str, person: int) -> List[HotelInfo]:
@@ -449,9 +509,12 @@ def flight_agent(state: TripState) -> dict:
     print("-> Step 3: LLM making intelligent selection...")
     selection_llm = llm.bind_tools([FlightSelection])
 
-    options_text = "".join([f"Option {i}: Airline: {opt.airline}, Price: €{opt.price:.2f}, Total Duration: {opt.duration_minutes} minutes.\n" for i, opt in enumerate(flight_options)])
-
-
+    
+    options_text = ""
+    for i, opt in enumerate(flight_options):
+        airline = opt.departure_leg.airline
+        total_duration = opt.total_duration_minutes
+        options_text += f"Option {i}: Airline: {airline}, Price: €{opt.price:.2f}, Total Duration: {total_duration} minutes.\n"
 
     prompt = f"""
     You are an expert travel agent. Your task is to select the best flight from the list below.
@@ -468,17 +531,29 @@ def flight_agent(state: TripState) -> dict:
     """
 
     ai_message = selection_llm.invoke(prompt)
+
+    selected_flight = None
+
     if not ai_message.tool_calls:
-        raise ValueError("LLM failed to select a flight.")
+        print("-> WARNING: LLM failed to select a flight on the first try. Defaulting to the cheapest option.")
+        selected_flight = flight_options[0]
 
-    tool_call = ai_message.tool_calls[0]
-    selection = FlightSelection(**tool_call['args'])
+    else:
+        tool_call = ai_message.tool_calls[0]
+        selection = FlightSelection(**tool_call['args'])
+        
+        if selection.best_option_index >= len(flight_options):
+            print(f"-> WARNING: LLM selected an invalid index. Defaulting to cheapest option.")
+            selected_flight = flight_options[0]
+        else:
+            selected_flight = flight_options[selection.best_option_index]
+            print(f"-> LLM reasoning for flight choice: {selection.reasoning}")
 
-    selected_flight = flight_options[selection.best_option_index]
 
-    print(f"-> LLM reasoning for flight choice: {selection.reasoning}")
-    print(f"-> LLM selected flight: {selected_flight.airline} from {selected_flight.origin} for €{selected_flight.price}")
-    
+    if selected_flight:
+        print(f"-> LLM selected flight: {selected_flight.departure_leg.airline} for €{selected_flight.price}")
+
+     
     return {"flight_options": flight_options, "selected_flight": selected_flight}
 
 
@@ -775,12 +850,11 @@ def should_refine_or_end(state: TripState):
 
 
 def report_formatter_node(state: TripState) -> dict:
-    """Takes the final trip plan and generates a formatted Markdown report."""
+    """Takes the final trip plan and generates a richly formatted Markdown report with all details."""
     print("--- Report Formatter is running ---")
     itinerary = state.get("final_itinerary")
     trip_plan = state.get("trip_plan")
     evaluation = state.get("evaluation_result")
-
     
     if not itinerary or not trip_plan or not itinerary.selected_flight or not itinerary.selected_hotel:
         final_report_md = "# Trip Plan Could Not Be Generated\n\n"
@@ -791,34 +865,73 @@ def report_formatter_node(state: TripState) -> dict:
         else:
             final_report_md += "A valid trip plan could not be generated with the available options. Please try modifying your request."
     else:
-        md = f"# Your Trip to {trip_plan.destination}\n\n"
+        def format_duration(minutes: int) -> str:
+            if not minutes: return ""
+            hours, mins = divmod(minutes, 60)
+            return f"{hours}h {mins}m"
+            
+        def format_date(date_str: str) -> str:
+            dt_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            return dt_obj.strftime("%B %d, %Y")
+
+        md = f"# Your Trip to {trip_plan.destination} ({format_date(trip_plan.start_date)} - {format_date(trip_plan.end_date)})\n\n"
+        
         md += "## 📊 Budget Summary\n"
         total_cost = evaluation.total_cost
         budget = trip_plan.budget
+        total_cost_per_person = total_cost / trip_plan.person if trip_plan.person > 0 else 0
         md += f"- **Your Budget:** €{budget:,.2f}\n"
         md += f"- **Total Estimated Cost:** €{total_cost:,.2f}\n"
+        md += f"- **Estimated Cost Per Person:** €{total_cost_per_person:,.2f}\n"
         if total_cost <= budget:
             md += f"- **Status:** ✅ Congratulations! Your plan is **€{budget - total_cost:,.2f} under budget**.\n\n"
         else:
             md += f"- **Status:** ⚠️ Warning! Your plan is **€{total_cost - budget:,.2f} over budget**.\n\n"
-
         md += f"A {trip_plan.days}-day trip for {trip_plan.person} people, focused on {', '.join(trip_plan.interests)}.\n\n"
+
         md += "## ✈️ Flight Information\n"
-        md += f"- **Airline:** {itinerary.selected_flight.airline}\n"
-        md += f"- **Departure:** {itinerary.selected_flight.origin}\n"
-        md += f"- **Total Price:** €{itinerary.selected_flight.price:,.2f}\n\n"
+        flight = itinerary.selected_flight
+        dep_leg = flight.departure_leg
+        ret_leg = flight.return_leg
         
+        md += f"**Airline:** {dep_leg.airline}\n"
+        md += f"**Total Price (for {trip_plan.person} people):** €{flight.price:,.2f}\n\n"
+        md += "|  | Time | Details | Airport |\n"
+        md += "|:---|:---|:---|:---|\n"
+        
+        aircraft_dep = f"({dep_leg.aircraft_type})" if dep_leg.aircraft_type else ""
+        details_depart = f"🛫 **{dep_leg.flight_number}** {aircraft_dep}"
+        md += f"| **Depart**<br>*{format_date(trip_plan.start_date)}* | **{dep_leg.departure_time}** | {details_depart} | **{dep_leg.departure_airport}** |\n"
+        md += f"| | *{format_duration(dep_leg.duration_minutes)}* | Total Journey | |\n"
+
+        if dep_leg.is_layover:
+            md += f"| | | *{format_duration(dep_leg.layover_duration_minutes)} Layover* | *at {dep_leg.layover_airport}* |\n"
+        md += f"| | **{dep_leg.arrival_time}** | 🛬 Arriving At | **{dep_leg.arrival_airport}** |\n"
+        md += "| | | | |\n"
+        
+        aircraft_ret = f"({ret_leg.aircraft_type})" if ret_leg.aircraft_type else ""
+        details_return = f"🛫 **{ret_leg.flight_number}** {aircraft_ret}"
+        md += f"| **Return**<br>*{format_date(trip_plan.end_date)}* | **{ret_leg.departure_time}** | {details_return} | **{ret_leg.departure_airport}** |\n"
+        md += f"| | *{format_duration(ret_leg.duration_minutes)}* | Total Journey | |\n"
+
+        if ret_leg.is_layover:
+            md += f"| | | *{format_duration(ret_leg.layover_duration_minutes)} Layover* | *at {ret_leg.layover_airport}* |\n"
+        md += f"| | **{ret_leg.arrival_time}** | 🛬 Arriving At | **{ret_leg.arrival_airport}** |\n\n"
+
+        num_nights = (datetime.strptime(trip_plan.end_date, "%Y-%m-%d") - datetime.strptime(trip_plan.start_date, "%Y-%m-%d")).days
         md += "## 🏨 Hotel Information\n"
         md += f"- **Hotel Name:** {itinerary.selected_hotel.hotel_name}\n"
         md += f"- **Rating:** {itinerary.selected_hotel.rating} / 10.0\n"
-        md += f"- **Total Accommodation Price:** €{itinerary.selected_hotel.total_price:,.2f}\n\n"
+        md += f"- **Total Price (for {num_nights} nights, {trip_plan.person} people):** €{itinerary.selected_hotel.total_price:,.2f}\n\n"
         
         md += "---\n\n## 🗺️ Daily Itinerary\n"
         if not itinerary.daily_plans:
             md += "No specific activities planned for this trip."
         else:
+            start_date_obj = datetime.strptime(trip_plan.start_date, "%Y-%m-%d")
             for day_plan in itinerary.daily_plans:
-                md += f"\n### Day {day_plan.day}\n"
+                current_date = start_date_obj + timedelta(days=day_plan.day - 1)
+                md += f"\n### Day {day_plan.day} - {current_date.strftime('%B %d, %Y')}\n"
                 for activity in day_plan.activities:
                     md += f"- **{activity.time_of_day}: {activity.name}**\n"
                     md += f"  - *{activity.description}*\n"
