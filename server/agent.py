@@ -81,6 +81,10 @@ class HotelInfo(BaseModel):
     price_per_night: float = Field(description="The price per night.")
     total_price: float = Field(description="The total price for the entire stay.")
     rating: float = Field(description="The hotel's rating out of 9.")
+    review_count: int = Field(description="Total number of reviews for the hotel.")
+    rating_word: str = Field(description="The rating described as a word, e.g., 'Exceptional'.")
+    main_photo_url: Optional[str] = Field(default=None, description="URL of the hotel's main photo.")
+    static_map_url: Optional[str] = Field(default=None, description="URL of a static map image showing the hotel's location.")
 
 
 class HotelSelection(BaseModel):
@@ -326,13 +330,13 @@ def location_id_finder_tool(city_name: str) -> Optional[str]:
         print(f"-> Error processing location ID data: {e}")
         return None
 
+
 @tool
 def hotel_search_tool(location_id: str, start_date: str, end_date: str, person: int) -> List[HotelInfo]:
     """
-    Searches for top hotels using a pre-fetched locationId from the Booking.com Stays API.
+    Searches for top hotels and extracts rich details for each option.
     """
     print(f"--- Calling REAL Booking.com Hotel API with Location ID: {location_id[:30]}... ---")
-
     
     url = "https://booking-com18.p.rapidapi.com/stays/search"
     querystring = {
@@ -360,27 +364,44 @@ def hotel_search_tool(location_id: str, start_date: str, end_date: str, person: 
         results = []
         num_nights = (datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")).days
         
-        for hotel_data in data['data'][:5]: 
-            total_price = hotel_data.get('priceBreakdown', {}).get('grossPrice', {}).get('value', 0)
-            price_per_night = total_price / num_nights if num_nights > 0 else 0
+        for hotel_data in data.get('data', [])[:5]:
+
+            price_breakdown = hotel_data.get('priceBreakdown', {})
+
+            total_price = price_breakdown.get('grossPrice', {}).get('value', 0)
+            price_per_night = price_breakdown.get('excludedPrice', {}).get('value', 0)
+            
+            hotel_id = hotel_data.get('id')
+
+            photo_url = None
+            if hotel_data.get('photoUrls'):
+                photo_url = hotel_data['photoUrls'][0]
+
+            static_map_url = None
+            lat = hotel_data.get('latitude')
+            lon = hotel_data.get('longitude')
+            
+            if lat and lon:
+                static_map_url = f"https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lon}&zoom=15&size=600x300&marker={lat},{lon},red-pushpin"
+            
             results.append(
                 HotelInfo(
                     hotel_name=hotel_data.get('name', 'Unknown Hotel'),
                     price_per_night=round(price_per_night, 2),
                     total_price=total_price,
-                    rating=hotel_data.get('reviewScore', 0)
+                    rating=hotel_data.get('reviewScore', 0),
+                    review_count=hotel_data.get('reviewCount', 0),
+                    rating_word=hotel_data.get('reviewScoreWord', ''),
+                    main_photo_url=photo_url,
+                    static_map_url=static_map_url
                 )
             )
         
-        print(f"-> Found {len(results)} hotel options from API.")
+        print(f"-> Found and parsed {len(results)} hotel options from API.")
         return results
 
-    except requests.exceptions.RequestException as e:
-        print(f"-> API request failed: {e}")
-        return []
-
-    except (KeyError, TypeError, ValueError) as e:
-        print(f"-> Error processing hotel data: {e}")
+    except Exception as e:
+        print(f"-> Hotel search or parsing failed: {e}")
         return []
 
 
@@ -918,11 +939,26 @@ def report_formatter_node(state: TripState) -> dict:
             md += f"| | | *{format_duration(ret_leg.layover_duration_minutes)} Layover* | *at {ret_leg.layover_airport}* |\n"
         md += f"| | **{ret_leg.arrival_time}** | 🛬 Arriving At | **{ret_leg.arrival_airport}** |\n\n"
 
+
         num_nights = (datetime.strptime(trip_plan.end_date, "%Y-%m-%d") - datetime.strptime(trip_plan.start_date, "%Y-%m-%d")).days
+        hotel = itinerary.selected_hotel
+        
         md += "## 🏨 Hotel Information\n"
-        md += f"- **Hotel Name:** {itinerary.selected_hotel.hotel_name}\n"
-        md += f"- **Rating:** {itinerary.selected_hotel.rating} / 10.0\n"
-        md += f"- **Total Price (for {num_nights} nights, {trip_plan.person} people):** €{itinerary.selected_hotel.total_price:,.2f}\n\n"
+        
+        if hotel.main_photo_url:
+            md += f"![{hotel.hotel_name}]({hotel.main_photo_url})\n\n"
+            
+        md += f"### {hotel.hotel_name}\n"
+        md += f"**Rating:** {hotel.rating} / 10.0 ({hotel.rating_word} based on {hotel.review_count} reviews)\n"
+        md += f"**Taxes and Fees:** ~€{hotel.price_per_night:,.2f}\n" 
+        md += f"**Total Price (for {num_nights} nights, {trip_plan.person} people):** €{hotel.total_price:,.2f}\n\n"
+        md += "\n"
+
+        if hotel.static_map_url:
+            interactive_map_url = f"https://www.google.com/maps/search/?api=1&query={hotel.hotel_name.replace(' ', '+')}"
+            
+            md += f"[![Map of {hotel.hotel_name}]({hotel.static_map_url})]({interactive_map_url})\n\n"
+
         
         md += "---\n\n## 🗺️ Daily Itinerary\n"
         if not itinerary.daily_plans:
