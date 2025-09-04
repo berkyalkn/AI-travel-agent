@@ -1,10 +1,10 @@
 # Your Trip to Amsterdam (September 25, 2025 - September 28, 2025)
 
 ## 📊 Budget Summary
-- **Your Budget:** €1,500.00
-- **Total Estimated Cost:** €1,335.24
-- **Estimated Cost Per Person:** €667.62
-- **Status:** ✅ Congratulations! Your plan is **€164.76 under budget**.
+- **Your Budget:** €6,000.00
+- **Total Estimated Cost:** €1,647.00
+- **Estimated Cost Per Person:** €823.50
+- **Status:** ✅ Congratulations! Your plan is **€4,353.00 under budget**.
 
 A 4-day trip for 2 people, focused on food, entertainment.
 
@@ -23,54 +23,69 @@ A 4-day trip for 2 people, focused on food, entertainment.
 | | **12:25 AM** | 🛬 Arriving At | **Istanbul Sabiha Gokcen International Airport (SAW)** |
 
 ## 🏨 Hotel Information
-- **Hotel Name:** The July - Boat & Co
-- **Rating:** 9.2 / 10.0
-- **Total Price (for 3 nights, 2 people):** €913.68
+![Park Mansion Hotel](https://cf.bstatic.com/xdata/images/hotel/square60/594324082.jpg?k=3bba11283e972c40c8c3615e9136c7237fb96b2f1922e73ab3707f8d883e2e48&o=)
+
+### Park Mansion Hotel
+**Rating:** 9.8 / 10.0 (Exceptional based on 185 reviews)
+**Price per Night (excl. taxes):** ~€152.75
+**Total Price (for 3 nights, 2 people):** €1,225.44
+
+
+[![Map of Park Mansion Hotel](https://staticmap.openstreetmap.de/staticmap.php?center=52.3610440154022,4.88098606467247&zoom=15&size=600x300&marker=52.3610440154022,4.88098606467247,red-pushpin)](https://www.google.com/maps/search/?api=1&query=Park+Mansion+Hotel)
 
 ---
 
 ## 🗺️ Daily Itinerary
 
 ### Day 1 - September 25, 2025
+- **Morning: Vondelpark**
+  - *Scenic cycle round the park*
+  - Location: Amsterdam
 - **Morning: Rijksmuseum**
-  - *A museum home to a vast collection of Dutch art and history*
+  - *Dutch art and history museum*
   - Location: Amsterdam
 - **Afternoon: Albert Cuyp Market**
-  - *A market offering a wide range of food choices*
+  - *Wide range of food choices and notable eateries*
   - Location: Amsterdam
 - **Evening: Sari Citra**
-  - *A notable eatery*
+  - *Notable eatery in De Pijp*
   - Location: Amsterdam
 
 ### Day 2 - September 26, 2025
 - **Morning: Van Gogh Museum**
-  - *A museum showcasing the works of Van Gogh*
+  - *Art museum*
+  - Location: Amsterdam
+- **Morning: Anne Frank House**
+  - *Historic house and museum*
   - Location: Amsterdam
 - **Afternoon: Foodhallen**
-  - *A popular indoor food market*
+  - *Indoor food market*
   - Location: Amsterdam
 - **Evening: Bazaar**
-  - *A notable eatery*
+  - *Notable eatery in De Pijp*
   - Location: Amsterdam
 
 ### Day 3 - September 27, 2025
-- **Morning: Upstairs Pannenkoekenhuis**
-  - *A restaurant serving plate-sized pancakes*
+- **Brunch: Upstairs Pannenkoekenhuis**
+  - *Plate-sized pancakes*
   - Location: Amsterdam
-- **Afternoon: The Cheese Museum**
-  - *A museum offering an interactive experience of Dutch cheese-making*
+- **Lunch: Rijsttafel**
+  - *Indonesian food experience*
+  - Location: Amsterdam
+- **Afternoon: Canal tour**
+  - *Scenic tour of Amsterdam's canals*
   - Location: Amsterdam
 - **Evening: Restaurant Hap Hmm**
-  - *A restaurant known for its delicious offerings*
+  - *Delicious food offerings*
   - Location: Amsterdam
 
 ### Day 4 - September 28, 2025
-- **Morning: Royal Palace**
-  - *A palace that can be visited with tickets*
+- **Afternoon: Cheese Museum**
+  - *Interactive cheese-making experience*
   - Location: Amsterdam
-- **Afternoon: Dam Square**
-  - *Amsterdam's most famous square*
+- **Afternoon: Kaap de Groene Hoop Festival**
+  - *Pop-up food and craft market*
   - Location: Amsterdam
 - **Afternoon: Rudi's**
-  - *A place serving warm stroopwafels*
+  - *Warm stroopwafels*
   - Location: Amsterdam
