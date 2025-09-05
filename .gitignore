@@ -46,3 +46,5 @@ Thumbs.db
 *.log
 
 agent_dev.ipynb
+
+/server/output/*
