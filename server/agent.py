@@ -946,17 +946,19 @@ def report_formatter_node(state: TripState) -> dict:
         md += "## 🏨 Hotel Information\n"
         
         if hotel.main_photo_url:
-            md += f"![{hotel.hotel_name}]({hotel.main_photo_url})\n\n"
+            large_photo_url = hotel.main_photo_url.replace('square60', 'square400')
+            md += f"![{hotel.hotel_name}]({large_photo_url})\n\n"
             
         md += f"### {hotel.hotel_name}\n"
-        md += f"**Rating:** {hotel.rating} / 10.0 ({hotel.rating_word} based on {hotel.review_count} reviews)\n"
-        md += f"**Taxes and Fees:** ~€{hotel.price_per_night:,.2f}\n" 
+        md += f"**Rating:** {hotel.rating} / 10.0 ({hotel.rating_word} based on {hotel.review_count} reviews) <br>"
+        md += f"**Taxes and Fees:** ~€{hotel.price_per_night:,.2f} <br>" 
         md += f"**Total Price (for {num_nights} nights, {trip_plan.person} people):** €{hotel.total_price:,.2f}\n\n"
         md += "\n"
 
         if hotel.static_map_url:
             interactive_map_url = f"https://www.google.com/maps/search/?api=1&query={hotel.hotel_name.replace(' ', '+')}"
             
+            md += "#### Location\n"
             md += f"[![Map of {hotel.hotel_name}]({hotel.static_map_url})]({interactive_map_url})\n\n"
 
         

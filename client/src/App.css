@@ -188,11 +188,17 @@ button:disabled {
 
 .markdown-content h1,
 .markdown-content h2,
-.markdown-content h3 {
+.markdown-content h3,
+.markdown-content h4 {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.5rem;
   margin-top: 2rem;
   margin-bottom: 1rem;
+}
+
+
+.markdown-content ul, .markdown-content ol {
+  padding-left: 20px;
 }
 
 .markdown-content code {
@@ -202,8 +208,39 @@ button:disabled {
   font-size: 0.9em;
 }
 
-.markdown-content ul, .markdown-content ol {
-    padding-left: 20px;
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.markdown-content th, .markdown-content td {
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f7fafc;
+  font-weight: 700;
+}
+
+.markdown-content td {
+  vertical-align: middle;
+}
+
+.markdown-content a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+.markdown-content img {
+    max-width: 100%;
+    border-radius: 8px;
 }
 
 .error-message {
