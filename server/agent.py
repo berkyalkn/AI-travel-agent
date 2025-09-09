@@ -38,6 +38,7 @@ class TripRequest(BaseModel) :
     person: int = Field(description="The total number of people participating in the trip.")
     budget: Optional[float] = Field(description="The estimated budget for the trip.")
     interests: Optional[List[str]] = Field(description="A list of interests for the trip, e.g., ['art', 'history', 'food'].")
+    daily_spending_budget: Optional[float] = Field(description="The estimated daily spending budget per person for activities, food, etc.")
 
     @property
     def days(self) -> int:
@@ -769,7 +770,14 @@ def evaluator_agent(state: TripState) -> dict:
     if not all([trip_plan, selected_flight, selected_hotel]):
         return { "evaluation_result": EvaluationResult(action="APPROVE", feedback="Could not evaluate due to missing data.", total_cost=0) }
         
-    total_cost = selected_flight.price + selected_hotel.total_price
+    flight_and_hotel_cost = selected_flight.price + selected_hotel.total_price 
+
+    daily_spending = trip_plan.daily_spending_budget if trip_plan.daily_spending_budget else 0
+
+    total_daily_spending = daily_spending * trip_plan.person * trip_plan.days
+
+    total_cost = flight_and_hotel_cost + total_daily_spending
+    
     budget = trip_plan.budget
 
     refinement_count = state.get('refinement_count', 0)
@@ -900,15 +908,21 @@ def report_formatter_node(state: TripState) -> dict:
         md += "## 📊 Budget Summary\n"
         total_cost = evaluation.total_cost
         budget = trip_plan.budget
-        total_cost_per_person = total_cost / trip_plan.person if trip_plan.person > 0 else 0
-        md += f"- **Your Budget:** €{budget:,.2f}\n"
+
+        flight_and_hotel_cost = itinerary.selected_flight.price + itinerary.selected_hotel.total_price
+        total_daily_spending = total_cost - flight_and_hotel_cost
+
+        md += f"- **Flight + Hotel Cost:** €{flight_and_hotel_cost:,.2f}\n"
+        if total_daily_spending > 0:
+            md += f"- **Estimated Daily Spending (for {trip_plan.days} days):** €{total_daily_spending:,.2f}\n"
+        md += f"------------------------------------\n"
         md += f"- **Total Estimated Cost:** €{total_cost:,.2f}\n"
-        md += f"- **Estimated Cost Per Person:** €{total_cost_per_person:,.2f}\n"
+        md += f"- **Your Total Budget:** €{budget:,.2f}\n\n"
+        
         if total_cost <= budget:
-            md += f"- **Status:** ✅ Congratulations! Your plan is **€{budget - total_cost:,.2f} under budget**.\n\n"
+            md += f"- **Status:** ✅ Plan is **€{budget - total_cost:,.2f} under budget**.\n\n"
         else:
-            md += f"- **Status:** ⚠️ Warning! Your plan is **€{total_cost - budget:,.2f} over budget**.\n\n"
-        md += f"A {trip_plan.days}-day trip for {trip_plan.person} people, focused on {', '.join(trip_plan.interests)}.\n\n"
+            md += f"- **Status:** ⚠️ Plan is **€{total_cost - budget:,.2f} over budget**.\n\n"
 
         md += "## ✈️ Flight Information\n"
         flight = itinerary.selected_flight
