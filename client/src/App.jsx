@@ -14,7 +14,8 @@ function App() {
     dates: '',
     people: '',
     budget: '',
-    interests: ''
+    interests: '',
+    daily_spending_budget: '' 
   });
 
 
@@ -38,6 +39,7 @@ function App() {
       if (!formData.people) newErrors.people = "Number of people is required.";
       if (!formData.budget) newErrors.budget = "Budget is required.";
       if (!formData.interests) newErrors.interests = "Please list at least one interest.";
+      if (!formData.daily_spending_budget) newErrors.daily_spending_budget = "Daily Spending Budget is required.";
       return newErrors;
     };
 
@@ -50,9 +52,11 @@ function App() {
       return;
     }
 
-    const { destination, origin, dates, people, budget, interests } = formData;
-    const user_query = `Plan a trip to ${destination} from ${origin}. Dates: ${dates}. Number of people: ${people}. Our budget is around ${budget}. We are interested in ${interests}.`;
+    const { destination, origin, dates, people, budget, interests, daily_spending_budget } = formData;
 
+    const user_query = `Plan a trip to ${destination} from ${origin}. Dates: ${dates}. Number of people: ${people}. Our budget is around ${budget}. We are interested in ${interests}. Also, we plan to have a daily spending budget of about ${daily_spending_budget} per person.`;
+
+   
     setIsLoading(true);
     setReport('');
 
