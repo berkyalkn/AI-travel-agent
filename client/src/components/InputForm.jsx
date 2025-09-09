@@ -45,7 +45,11 @@ function InputForm({ formData, setFormData, handlePlanTrip, isLoading, errors })
         <input type="text" id="budget" name="budget" value={formData.budget} onChange={handleChange} placeholder="e.g., 2000 euros" disabled={isLoading} className={errors.budget ? "input-error" : ""}/>
         {errors.budget && <p className="error-message">{errors.budget}</p>}
       </div>
-      
+      <div className="form-group full-width">
+        <label htmlFor="daily_spending_budget">Daily Spending (per person)</label>
+        <input type="text" id="daily_spending_budget" name="daily_spending_budget" value={formData.daily_spending_budget} onChange={handleChange} placeholder="e.g., 75 euros" disabled={isLoading} className={errors.daily_spending_budget ? "input-error" : ""}/>
+        {errors.daily_spending_budget && <p className="error-message">{errors.daily_spending_budget}</p>}
+      </div>
     
       <div className="form-submit-area">
         <motion.button
