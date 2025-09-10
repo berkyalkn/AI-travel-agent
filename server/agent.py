@@ -128,6 +128,11 @@ class EventInfo(BaseModel):
     url: str = Field(description="A direct URL to the event page for more details and tickets.")
 
 
+class SelectedEvents(BaseModel):
+    """A selected list of the most relevant events for the user."""
+    events: List[EventInfo]
+
+
 class Itinerary(BaseModel):
     """The complete, final itinerary for the trip."""
     selected_flight: FlightInfo
@@ -466,11 +471,12 @@ def activity_finder_tool(destination: str, interests: List[str]) -> str:
     return all_results_summary
 
 
+
 @tool
 def event_finder_tool(city: str, start_date: str, end_date: str) -> List[EventInfo]:
     """
-    Finds events, concerts, and attractions in a given city within a specific date range
-    using the Ticketmaster Discovery API.
+    Finds events, concerts, and attractions in a given city within a specific date range,
+    sorted by relevance.
     """
     print(f"--- Calling Ticketmaster API for events in {city} ---")
     
@@ -478,13 +484,14 @@ def event_finder_tool(city: str, start_date: str, end_date: str) -> List[EventIn
     end_datetime = f"{end_date}T23:59:59Z"
     
     url = "https://app.ticketmaster.com/discovery/v2/events.json"
+    
     params = {
-        'apikey': ticketmaster_api_key,
+        'apikey': TICKETMASTER_API_KEY,
         'city': city,
         'startDateTime': start_datetime,
         'endDateTime': end_datetime,
-        'sort': 'date,asc',
-        'size': 10 
+        'sort': 'relevance,desc', 
+        'size': 50 
     }
 
     try:
@@ -711,19 +718,51 @@ def hotel_agent(state: TripState) -> dict:
     return {"hotel_options": hotel_options, "selected_hotel": selected_hotel}
 
 
+
 def event_agent(state: TripState) -> dict:
-    """Calls the event_finder_tool and adds the results to the state."""
-    print("--- Running Event Agent ---")
+    """Finds events and then uses an LLM to select the list based on user interests."""
+
+    print("--- Running Smart Event Agent ---")
+
     trip_plan = state['trip_plan']
-    if not trip_plan: return {}
+    if not trip_plan or not trip_plan.interests: return {"events": []}
     
-    events = event_finder_tool.invoke({
+    all_events = event_finder_tool.invoke({
         "city": trip_plan.destination,
         "start_date": trip_plan.start_date,
         "end_date": trip_plan.end_date,
     })
     
-    return {"events": events}
+    if not all_events:
+        return {"events": []}
+    
+    selected_llm = llm.bind_tools([SelectedEvents])
+    
+    prompt = f"""
+    You are an expert event curator. Based on a user's interests, your task is to select the most relevant events from a provided list.
+
+    User's Interests: {', '.join(trip_plan.interests)}
+
+    Here is a list of events happening during their trip. Please review them, remove any duplicates or near-duplicates (like the same museum entry listed multiple times), and select the top 3-4 most relevant events that best match the user's interests.
+
+    LIST OF AVAILABLE EVENTS:
+    {json.dumps([event.model_dump() for event in all_events])}
+
+    Now, call the `SelectedEvents` function with your final, selected list of events.
+    """
+    
+    ai_message = selected_llm.invoke(prompt)
+    
+    if not ai_message.tool_calls:
+        print("-> LLM failed to select events. Returning the raw list.")
+        return {"events": all_events[:5]} #
+        
+    tool_call = ai_message.tool_calls[0]
+    selected_list = SelectedEvents(**tool_call['args'])
+    
+    print(f"-> LLM select the list down to {len(selected_list.events)} relevant events.")
+    
+    return {"events": selected_list.events}
 
 
 def activity_extraction_agent(state: TripState) -> dict:
@@ -797,16 +836,24 @@ def activity_scheduling_agent(state: TripState) -> dict:
     planner_llm = llm.bind_tools([ScheduledActivities])
     
     prompt = f"""
-    You are an expert travel planner. Your sole task is to organize the following list of activities into a logical daily schedule for a {trip_plan.days}-day trip.
+    You are an expert travel planner. Your task is to organize the following list of activities into a logical daily schedule for a {trip_plan.days}-day trip.
 
-    CRITICAL INSTRUCTIONS:
-    - Distribute the activities logically and evenly across the {trip_plan.days} days.
-    - The final output MUST be a single, valid JSON object that perfectly matches the `ScheduledActivities` schema, containing only the 'daily_plans' field.
+    **Chain of Thought Process:**
+    1.  First, review all the activities provided.
+    2.  Second, group them logically by location or type (e.g., all museums together, all food places together).
+    3.  Third, distribute these groups across the {trip_plan.days} days to create a sensible flow. Avoid putting too many heavy activities on the same day.
+    4.  Fourth, ensure the final JSON output strictly adheres to the `ScheduledActivities` schema.
 
-    LIST OF PRE-APPROVED ACTIVITIES TO SCHEDULE:
+    **CRITICAL INSTRUCTIONS:**
+    - The `day` field must be an integer (e.g., 1, 2, 3).
+    - The `activities` field for each day must be a list of activity objects.
+    - **If you run out of activities, DO NOT include any subsequent empty days in the plan.** The plan must ONLY contain days that have at least one activity.
+    - The final output MUST be a single, valid JSON object that perfectly matches the `ScheduledActivities` schema.
+
+    **LIST OF PRE-APPROVED ACTIVITIES TO SCHEDULE:**
     {json.dumps([act.model_dump() for act in activities])}
 
-    Now, create the `ScheduledActivities` JSON object.
+    Now, following the process above, create the `ScheduledActivities` JSON object.
     """
     
     ai_message = planner_llm.invoke(prompt)
