@@ -21,8 +21,10 @@ load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 tavily_api_key = os.getenv("TAVILY_API_KEY")
 rapidapi_key = os.getenv("RAPIDAPI_KEY")
+ticketmaster_api_key = os.getenv("TICKETMASTER_API_KEY")
 
-if not all([groq_api_key, tavily_api_key, rapidapi_key]):
+
+if not all([groq_api_key, tavily_api_key, rapidapi_key, ticketmaster_api_key]):
     raise ValueError("One or more required API keys are missing from the .env file!")
 
 
@@ -118,6 +120,13 @@ class ScheduledActivities(BaseModel):
     daily_plans: List[DailyPlan]
 
 
+class EventInfo(BaseModel):
+    """Schema for a single event."""
+    name: str = Field(description="The name of the event.")
+    date: str = Field(description="The date of the event in YYYY-MM-DD format.")
+    venue: str = Field(description="The name of the venue where the event is held.")
+    url: str = Field(description="A direct URL to the event page for more details and tickets.")
+
 
 class Itinerary(BaseModel):
     """The complete, final itinerary for the trip."""
@@ -142,6 +151,7 @@ class TripState(TypedDict):
     selected_hotel: Optional[HotelInfo]
     hotel_options: List[HotelInfo]
     extracted_activities: Optional[List[Activity]]
+    events: Optional[List[EventInfo]]
     final_itinerary: Optional[Itinerary]
     evaluation_result: Optional[EvaluationResult] 
     refinement_count: int 
@@ -456,6 +466,55 @@ def activity_finder_tool(destination: str, interests: List[str]) -> str:
     return all_results_summary
 
 
+@tool
+def event_finder_tool(city: str, start_date: str, end_date: str) -> List[EventInfo]:
+    """
+    Finds events, concerts, and attractions in a given city within a specific date range
+    using the Ticketmaster Discovery API.
+    """
+    print(f"--- Calling Ticketmaster API for events in {city} ---")
+    
+    start_datetime = f"{start_date}T00:00:00Z"
+    end_datetime = f"{end_date}T23:59:59Z"
+    
+    url = "https://app.ticketmaster.com/discovery/v2/events.json"
+    params = {
+        'apikey': ticketmaster_api_key,
+        'city': city,
+        'startDateTime': start_datetime,
+        'endDateTime': end_datetime,
+        'sort': 'date,asc',
+        'size': 10 
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get('_embedded') or not data['_embedded'].get('events'):
+            print(f"-> No events found in {city} for the given dates.")
+            return []
+
+        events = []
+        for event_data in data['_embedded']['events']:
+            venue_info = event_data.get('_embedded', {}).get('venues', [{}])[0]
+            event = EventInfo(
+                name=event_data.get('name'),
+                date=event_data.get('dates', {}).get('start', {}).get('localDate', ''),
+                venue=venue_info.get('name', 'Venue details not available'),
+                url=event_data.get('url', '#')
+            )
+            events.append(event)
+        
+        print(f"-> Found {len(events)} events.")
+        return events
+
+    except Exception as e:
+        print(f"-> Ticketmaster API request or parsing failed: {e}")
+        return []
+
+
 
 def planner_agent(state: TripState) -> dict:
     """
@@ -651,6 +710,20 @@ def hotel_agent(state: TripState) -> dict:
     
     return {"hotel_options": hotel_options, "selected_hotel": selected_hotel}
 
+
+def event_agent(state: TripState) -> dict:
+    """Calls the event_finder_tool and adds the results to the state."""
+    print("--- Running Event Agent ---")
+    trip_plan = state['trip_plan']
+    if not trip_plan: return {}
+    
+    events = event_finder_tool.invoke({
+        "city": trip_plan.destination,
+        "start_date": trip_plan.start_date,
+        "end_date": trip_plan.end_date,
+    })
+    
+    return {"events": events}
 
 
 def activity_extraction_agent(state: TripState) -> dict:
@@ -975,6 +1048,15 @@ def report_formatter_node(state: TripState) -> dict:
             md += "#### Location\n"
             md += f"[![Map of {hotel.hotel_name}]({hotel.static_map_url})]({interactive_map_url})\n\n"
 
+
+        if events:
+            md += "---\n\n## 🎫 Events & Concerts During Your Stay\n"
+            md += "| Date | Event | Venue |\n"
+            md += "|:---|:---|:---|\n"
+            for event in events:
+                md += f"| {event.date} | **[{event.name}]({event.url})** | {event.venue} |\n"
+            md += "\n"
+
         
         md += "---\n\n## 🗺️ Daily Itinerary\n"
         if not itinerary.daily_plans:
@@ -1014,8 +1096,9 @@ workflow = StateGraph(TripState)
 
 workflow.add_node("planner_agent", planner_agent)
 workflow.add_node("flight_agent", flight_agent)
-workflow.add_node("hotel_agent", hotel_agent) 
+workflow.add_node("hotel_agent", hotel_agent)
 workflow.add_node("activity_extraction_agent", activity_extraction_agent)
+workflow.add_node("event_agent", event_agent) 
 workflow.add_node("activity_scheduling_agent", activity_scheduling_agent)
 workflow.add_node("evaluator_agent", evaluator_agent)
 workflow.add_node("report_formatter_node", report_formatter_node) 
@@ -1028,9 +1111,13 @@ workflow.add_edge("planner_agent", "hotel_agent")
 
 workflow.add_edge("flight_agent", "activity_extraction_agent")
 workflow.add_edge("hotel_agent", "activity_extraction_agent")
+workflow.add_edge("flight_agent", "event_agent")
+workflow.add_edge("hotel_agent", "event_agent")
 
 
 workflow.add_edge("activity_extraction_agent", "activity_scheduling_agent")
+workflow.add_edge("event_agent", "activity_scheduling_agent")
+
 workflow.add_edge("activity_scheduling_agent", "evaluator_agent")
 
 workflow.add_conditional_edges(
