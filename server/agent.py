@@ -15,6 +15,10 @@ from langgraph.graph import StateGraph, START, END
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
 
+from geopy.geocoders import Nominatim
+from geopy.extra.rate_limiter import RateLimiter
+import folium
+from folium import plugins
 
 
 load_dotenv()
@@ -102,6 +106,8 @@ class Activity(BaseModel):
     description: str = Field(description="A brief description of the activity.")
     location: str = Field(description="Location or address of the activity.")
     time_of_day: str = Field(description="Suggested time of day, e.g., 'Morning', 'Afternoon', 'Evening'.")
+    latitude: Optional[float] = Field(default=None, description="The latitude of the activity location.")
+    longitude: Optional[float] = Field(default=None, description="The longitude of the activity location.")
 
 
 class ExtractedActivities(BaseModel):
@@ -160,6 +166,7 @@ class TripState(TypedDict):
     final_itinerary: Optional[Itinerary]
     evaluation_result: Optional[EvaluationResult] 
     refinement_count: int 
+    map_html: Optional[str]
     markdown_report: Optional[str]
 
 
@@ -486,7 +493,7 @@ def event_finder_tool(city: str, start_date: str, end_date: str) -> List[EventIn
     url = "https://app.ticketmaster.com/discovery/v2/events.json"
     
     params = {
-        'apikey': TICKETMASTER_API_KEY,
+        'apikey': ticketmaster_api_key,
         'city': city,
         'startDateTime': start_datetime,
         'endDateTime': end_datetime,
@@ -521,6 +528,23 @@ def event_finder_tool(city: str, start_date: str, end_date: str) -> List[EventIn
         print(f"-> Ticketmaster API request or parsing failed: {e}")
         return []
 
+
+@tool
+def geocoding_tool(location_name: str) -> Optional[Dict[str, float]]:
+    """
+    Geocodes a location name (e.g., 'Rijksmuseum, Amsterdam') to its latitude and longitude.
+    """
+    print(f"--- Geocoding: {location_name} ---")
+    try:
+        geolocator = Nominatim(user_agent="ai-travel-agent")
+        geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+        location = geocode(location_name)
+        if location:
+            return {"latitude": location.latitude, "longitude": location.longitude}
+        return None
+    except Exception as e:
+        print(f"-> Geocoding failed for {location_name}: {e}")
+        return None
 
 
 def planner_agent(state: TripState) -> dict:
@@ -755,7 +779,7 @@ def event_agent(state: TripState) -> dict:
     
     if not ai_message.tool_calls:
         print("-> LLM failed to select events. Returning the raw list.")
-        return {"events": all_events[:5]} #
+        return {"events": all_events[:5]} 
         
     tool_call = ai_message.tool_calls[0]
     selected_list = SelectedEvents(**tool_call['args'])
@@ -791,7 +815,7 @@ def activity_extraction_agent(state: TripState) -> dict:
     - Focus only on concrete nouns (e.g., 'Rijksmuseum', 'Anne Frank House').
     - Ignore generic suggestions like 'explore the city' or 'go on a food tour'.
     - For each extracted activity, create a structured object with `name`, `description`, `location`, and a suitable `time_of_day`.
-    - The location should be the city name: "{state['trip_plan'].destination}"
+    - **Crucially, for the `location` field, you MUST provide a specific, geocodable address or neighborhood if possible. If not, you MUST use the city name: "{state['trip_plan'].destination}"**. This is vital for the mapping agent that will use this data.
 
     RAW SEARCH RESULTS:
     ---
@@ -811,6 +835,28 @@ def activity_extraction_agent(state: TripState) -> dict:
     
     print(f"-> Extracted {len(extracted.activities)} specific activities.")
     return {"extracted_activities": extracted.activities}
+
+
+
+def geocoding_agent(state: TripState) -> dict:
+    """
+    Takes the list of extracted activities and enriches them with coordinates.
+    """
+    print("--- Running Geocoding Agent ---")
+    activities = state.get("extracted_activities")
+    if not activities:
+        return {}
+
+    enriched_activities = []
+    for activity in activities:
+        search_query = f"{activity.name}, {state['trip_plan'].destination}"
+        coords = geocoding_tool.invoke(search_query)
+        if coords:
+            activity.latitude = coords['latitude']
+            activity.longitude = coords['longitude']
+        enriched_activities.append(activity)
+    
+    return {"extracted_activities": enriched_activities}
 
 
 
@@ -998,12 +1044,67 @@ def should_refine_or_end(state: TripState):
         return "refine_flight"
 
 
+    
+def map_generator_node(state: TripState) -> dict:
+    """Generates an interactive Folium map from the final itinerary and returns its HTML content."""
+    print("--- Running Map Generator ---")
+    final_itinerary = state.get("final_itinerary")
+    if not final_itinerary or not final_itinerary.daily_plans:
+        return {"map_html": None} 
+
+    first_coord = None
+    all_coords = [] 
+    for day in final_itinerary.daily_plans:
+        for activity in day.activities:
+            if activity.latitude and activity.longitude:
+                coord = (activity.latitude, activity.longitude)
+                all_coords.append(coord)
+                if first_coord is None:
+                    first_coord = coord
+    
+    if not first_coord:
+        print("-> No coordinates found in the itinerary to create a map.")
+        return {"map_html": None}
+
+    m = folium.Map(location=first_coord, zoom_start=13)
+
+    marker_cluster = folium.plugins.MarkerCluster().add_to(m)
+    
+    colors = ['blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue', 'pink', 'lightgray']
+    
+    activity_counter = 1
+    for i, day_plan in enumerate(final_itinerary.daily_plans):
+        day_color = colors[i % len(colors)] 
+        for activity in day_plan.activities:
+            if activity.latitude and activity.longitude:
+                popup_html = f"<b>Day {day_plan.day}: {activity.name}</b><br>{activity.description}"
+                folium.Marker(
+                    [activity.latitude, activity.longitude],
+                    popup=popup_html,
+                    tooltip=f"Day {day_plan.day} - {activity_counter}. {activity.name}",
+                    icon=folium.Icon(color=day_color, icon='info-sign')
+                ).add_to(marker_cluster) 
+                activity_counter += 1
+
+    if all_coords:
+        m.fit_bounds(m.get_bounds())
+
+    map_html_content = m._repr_html_()
+    
+    print(f"-> Interactive map HTML generated.")
+    
+    return {"map_html": map_html_content}
+
+
+
 def report_formatter_node(state: TripState) -> dict:
     """Takes the final trip plan and generates a richly formatted Markdown report with all details."""
     print("--- Report Formatter is running ---")
     itinerary = state.get("final_itinerary")
     trip_plan = state.get("trip_plan")
     evaluation = state.get("evaluation_result")
+    events = state.get("events")
+    map_html_content = state.get("map_html") 
     
     if not itinerary or not trip_plan or not itinerary.selected_flight or not itinerary.selected_hotel:
         final_report_md = "# Trip Plan Could Not Be Generated\n\n"
@@ -1080,19 +1181,17 @@ def report_formatter_node(state: TripState) -> dict:
         md += "## 🏨 Hotel Information\n"
         
         if hotel.main_photo_url:
-            large_photo_url = hotel.main_photo_url.replace('square60', 'square400')
-            md += f"![{hotel.hotel_name}]({large_photo_url})\n\n"
+            md += f"![{hotel.hotel_name}]({hotel.main_photo_url})\n\n"
             
         md += f"### {hotel.hotel_name}\n"
-        md += f"**Rating:** {hotel.rating} / 10.0 ({hotel.rating_word} based on {hotel.review_count} reviews) <br>"
-        md += f"**Taxes and Fees:** ~€{hotel.price_per_night:,.2f} <br>" 
+        md += f"**Rating:** {hotel.rating} / 10.0 ({hotel.rating_word} based on {hotel.review_count} reviews)\n"
+        md += f"**Taxes and Fees:** ~€{hotel.price_per_night:,.2f}\n" 
         md += f"**Total Price (for {num_nights} nights, {trip_plan.person} people):** €{hotel.total_price:,.2f}\n\n"
         md += "\n"
 
         if hotel.static_map_url:
             interactive_map_url = f"https://www.google.com/maps/search/?api=1&query={hotel.hotel_name.replace(' ', '+')}"
             
-            md += "#### Location\n"
             md += f"[![Map of {hotel.hotel_name}]({hotel.static_map_url})]({interactive_map_url})\n\n"
 
 
@@ -1110,13 +1209,29 @@ def report_formatter_node(state: TripState) -> dict:
             md += "No specific activities planned for this trip."
         else:
             start_date_obj = datetime.strptime(trip_plan.start_date, "%Y-%m-%d")
+            activity_counter = 1
             for day_plan in itinerary.daily_plans:
                 current_date = start_date_obj + timedelta(days=day_plan.day - 1)
                 md += f"\n### Day {day_plan.day} - {current_date.strftime('%B %d, %Y')}\n"
                 for activity in day_plan.activities:
-                    md += f"- **{activity.time_of_day}: {activity.name}**\n"
+                    md += f"- **{activity.time_of_day}: {activity_counter}. {activity.name}**\n"
                     md += f"  - *{activity.description}*\n"
-                    md += f"  - Location: {activity.location}\n"
+                
+                    if activity.latitude and activity.longitude:
+                        location_url = f"https://www.google.com/maps/search/?api=1&query={activity.latitude},{activity.longitude}"
+                        md += f"  - Location: [{activity.location}]({location_url})\n"
+                    else:
+                        location_url = f"https://www.google.com/maps/search/?api=1&query={activity.location.replace(' ', '+')}+{trip_plan.destination.replace(' ', '+')}"
+                        md += f"  - Location: [{activity.location}]({location_url})\n"
+                
+                    activity_counter += 1
+
+
+        if map_html_content:
+            md += "\n---\n\n## 📍 Interactive Trip Map\n"
+            md += "Click on the numbered pins to see activity details.\n\n"
+            md += f'<div style="border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden; height: 500px;">{map_html_content}</div>'
+
         final_report_md = md
 
     output_dir = "output"
@@ -1127,7 +1242,7 @@ def report_formatter_node(state: TripState) -> dict:
         with open(md_path, "w", encoding="utf-8") as f: f.write(final_report_md)
         print(f"-> Markdown report saved to: {md_path}")
         
-        css_style = """<style> body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 2rem; background-color: #fdfdfd; border: 1px solid #e1e1e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px; } h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; } h1 { font-size: 2.5em; text-align: center; } h2 { font-size: 2em; } code { background-color: #ecf0f1; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; } </style>"""
+        css_style = """<style> body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 2rem; background: linear-gradient(to right, #f8f9fa, #ffffff); border: 1px solid #e1e1e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px; } h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; } h1 { font-size: 2.5em; text-align: center; } h2 { font-size: 2em; } code { background-color: #ecf0f1; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; } </style>"""
         html_body = markdown2.markdown(final_report_md, extras=["tables", "fenced-code-blocks"])
         full_html = f'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>AI Trip Plan</title>{css_style}</head><body>{html_body}</body></html>'
         with open(html_path, "w", encoding="utf-8") as f: f.write(full_html)
@@ -1138,6 +1253,7 @@ def report_formatter_node(state: TripState) -> dict:
     return {"markdown_report": final_report_md}
 
 
+
 workflow = StateGraph(TripState)
 
 
@@ -1145,10 +1261,12 @@ workflow.add_node("planner_agent", planner_agent)
 workflow.add_node("flight_agent", flight_agent)
 workflow.add_node("hotel_agent", hotel_agent)
 workflow.add_node("activity_extraction_agent", activity_extraction_agent)
+workflow.add_node("geocoding_agent", geocoding_agent)
 workflow.add_node("event_agent", event_agent) 
 workflow.add_node("activity_scheduling_agent", activity_scheduling_agent)
 workflow.add_node("evaluator_agent", evaluator_agent)
 workflow.add_node("report_formatter_node", report_formatter_node) 
+workflow.add_node("map_generator_node", map_generator_node) 
 
 
 workflow.add_edge(START, "planner_agent")
@@ -1162,7 +1280,8 @@ workflow.add_edge("flight_agent", "event_agent")
 workflow.add_edge("hotel_agent", "event_agent")
 
 
-workflow.add_edge("activity_extraction_agent", "activity_scheduling_agent")
+workflow.add_edge("activity_extraction_agent", "geocoding_agent")
+workflow.add_edge("geocoding_agent", "activity_scheduling_agent") 
 workflow.add_edge("event_agent", "activity_scheduling_agent")
 
 workflow.add_edge("activity_scheduling_agent", "evaluator_agent")
@@ -1173,10 +1292,11 @@ workflow.add_conditional_edges(
     {
         "refine_hotel": "hotel_agent",           
         "refine_flight": "flight_agent",         
-        "end": "report_formatter_node"           
+        "end": "map_generator_node"           
     }
 )
 
+workflow.add_edge("map_generator_node", "report_formatter_node")
 workflow.add_edge("report_formatter_node", END)
 
 
