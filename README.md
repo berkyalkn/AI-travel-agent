@@ -7,7 +7,7 @@ An AI travel agent built with React frontend, a FastAPI backend and a LangGraph 
 
 ## Overview
 
-This project automates the travel planning process through a full-stack application. A user interacts with a React-based web interface, submitting a high-level request (e.g., "a 5-day trip from Antalya to Rome for 2 people with a €2000 budget, focusing on history"). The request is sent to a FastAPI backend, which orchestrates a team of specialized AI agents. The system connects to live APIs for flight and hotel data and uses real-time web search for activities to produce a complete, logical, and budget-compliant travel plan, which is then rendered back to the user in the web UI.
+This project automates the travel planning process through a full-stack application. A user interacts with a React-based web interface, submitting a high-level request (e.g., "a 5-day trip from Antalya to Rome for 2 people with a €2000 budget, focusing on history"). The request is sent to a FastAPI backend, which orchestrates a team of specialized AI agents. The system connects to live APIs for flight and hotel data, uses real-time web search for activities, and queries for live events and concerts to produce a complete, logical, and budget-compliant travel plan, which is then rendered back to the user in the web UI.
 
 The core of this project is its robust, decoupled architecture and its ability to not only generate a plan but also to evaluate its own work and autonomously self-correct.
 
@@ -22,6 +22,8 @@ The core of this project is its robust, decoupled architecture and its ability t
 -   **Multi-Agent Orchestration:** Uses LangGraph to manage a stateful team of specialized agents (Planner, Researcher, Evaluator, etc.) that collaborate and share state to achieve a complex goal.
 -   **Parallel Task Execution:**  Efficiently searches for flights and hotels concurrently to reduce planning time.
 -   **Intelligent Self-Correction & Multi-Path Refinement:** A built-in Evaluator agent checks the plan against user constraints (e.g., budget). If the plan fails, it strategically decides whether to refine the flight or the hotel and triggers a targeted revision loop. The system intelligently selects the next-best option from the available choices in each loop.
+-   **Realistic Budgeting:** The system now incorporates a user-defined daily spending budget (for food, local transport, etc.) into its total cost calculation and evaluation, providing a much more realistic travel plan.
+-   **Live Event Discovery:** A dedicated `Event Agent` connects to the Ticketmaster API to find and suggest real-time events, concerts, and shows happening in the destination city during the user's travel dates.
 -  **Detailed & User-Friendly Itinerary:** Delivers the final plan as a rich Markdown report, featuring a budget summary, detailed flight tables (including times, flight numbers, aircraft types, and layovers), hotel information, and a day-by-day activity schedule.
 
 ---
@@ -35,8 +37,10 @@ The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node
 
 1.  **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
 2. **Parallel Data Gathering (Flight & Hotel Agents):** These agents run concurrently. They query live APIs for all possible flight and hotel options and use an LLM to make an initial selection based on a balance of cost and quality.
-3. **Activity Extraction Agent:** Takes the user's interests, performs live web searches using Tavily, and uses a robust LLM pipeline to parse the raw search results into a structured list of Activity objects.
-4. **Activity Scheduling Agent:** In a separate, focused step, this agent takes the structured list of activities and uses an LLM to organize them into a logical, day-by-day DailyPlan. This separation makes the process more reliable.
+3. **Parallel Information Gathering (Activities & Events):** After the initial selections, two agents work concurrently:
+    - **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest based on user's interests.
+    - **Event Agent:** Queries the Ticketmaster API to find live events like concerts and shows for the travel dates.
+4. **Activity Scheduling Agent:** In a separate, focused step, this agent takes both the general activities and the live events and organizes them into a logical, day-by-day `DailyPlan`.
 5. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
 6. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
 7.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
@@ -56,6 +60,7 @@ graph TD
             D{Flight Agent}
             E{Hotel Agent}
             F(Activity Extraction)
+            J(Event Agent)
             G(Activity Scheduling)
             H(Evaluator Agent)
             I(Report Formatter)
@@ -66,9 +71,9 @@ graph TD
     A -- "POST Request with user_query" --> B
     B -- "Invokes Agent" --> C
     C --> D & E
-    D --> F
-    E --> F
+    D & E -- "Base Plan" --> F & J
     F --> G
+    J --> G
     G --> H
     H -- "Refine Hotel" --> E
     H -- "Refine Flight" --> D
@@ -96,6 +101,7 @@ Category | Tool/Library | Purpose |
 | | **React-Markdown** | Rendering the final Markdown report beautifully in the UI.|
 | `Data Source` | **RapidAPI** | Platform for accessing live Flight and Hotel APIs.|
 | | **Tavily** | Live web search for finding real-time activity information.
+| | **Ticketmaster** | Live API for discovering concerts, sports, and other events. 
 
 
 ---
@@ -206,7 +212,7 @@ This project is a practical implementation of several advanced concepts in AI en
 -   **Advanced Routing & Conditional Logic:** Using conditional edges to create a multi-path, self-correcting loop. The graph dynamically routes its own execution path back to different agents (hotel_agent or flight_agent) based on the strategic output of the Evaluator agent.
 -   **Stateful Multi-Agent Orchestration:** Using LangGraph to manage a complex, multi-step process where multiple specialized agents collaborate and share information through a persistent state (TripState).
 -   **Evaluation & Reflection:** Creating a dedicated Evaluator agent that critiques the system's own output against user constraints and available alternatives, enabling true autonomous decision-making and refinement.
--   **Intent Parsing & Slot Filling:** The initial `Planner Agent` acts as a classic Natural Language Understanding (NLU) component. It parses the user's intent (planning a trip) and fills the necessary "slots" (`destination`, `budget`, `dates`) to create a structured request for the downstream agents.
+-   **Complex Intent Parsing & Slot Filling:** The `Planner Agent` demonstrates robust NLU capabilities. It not only parses primary constraints (destination, budget) but also extracts secondary, nuanced details like the `daily_spending_budget` from a single, unstructured sentence.
 -   **AI-driven Reflection (Self-Critique):** The `Evaluator Agent` is a practical implementation of AI reflection. It critiques the generated plan against a set of rules (the user's constraints), mirroring advanced concepts like Constitutional AI where a system uses principles to judge and refine its own outputs, leading to more reliable and aligned results.
 
 ### What You Get
@@ -216,4 +222,5 @@ After processing, the application renders a complete and detailed travel plan di
 -   **A Budget Summary:** A clear breakdown of the total estimated cost versus the user's budget, including a cost-per-person calculation.
 -   **Detailed Flight Information:** A table-formatted view of the selected flights, including departure/arrival times, airports, flight numbers, aircraft types, and layover details.
 -   **Curated Hotel Selection:** The chosen hotel with its rating and total price for the stay.
+-  **Live Event Recommendations:** A selected list of concerts, shows, and other live events happening in the city during the travel dates, complete with links for more details.
 -   **A Day-by-Day Itinerary:** A logical schedule of activities and experiences tailored to the user's interests, with actual dates for each day.
