@@ -25,6 +25,7 @@ The core of this project is its robust, decoupled architecture and its ability t
 -   **Realistic Budgeting:** The system now incorporates a user-defined daily spending budget (for food, local transport, etc.) into its total cost calculation and evaluation, providing a much more realistic travel plan.
 -   **Live Event Discovery:** A dedicated `Event Agent` connects to the Ticketmaster API to find and suggest real-time events, concerts, and shows happening in the destination city during the user's travel dates.
 -  **Detailed & User-Friendly Itinerary:** Delivers the final plan as a rich Markdown report, featuring a budget summary, detailed flight tables (including times, flight numbers, aircraft types, and layovers), hotel information, and a day-by-day activity schedule.
+-   **Interactive Map Visualization:** Automatically geocodes all planned activities and generates an interactive `folium` map, plotting the entire itinerary with numbered markers for each stop, which is displayed in the final Markdown.
 
 ---
 
@@ -40,10 +41,12 @@ The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node
 3. **Parallel Information Gathering (Activities & Events):** After the initial selections, two agents work concurrently:
     - **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest based on user's interests.
     - **Event Agent:** Queries the Ticketmaster API to find live events like concerts and shows for the travel dates.
-4. **Activity Scheduling Agent:** In a separate, focused step, this agent takes both the general activities and the live events and organizes them into a logical, day-by-day `DailyPlan`.
-5. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
-6. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
-7.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
+4. **Geocoding Agent:** After activities are extracted, this agent takes the list of locations and uses a geocoding tool (`geopy`) to find the precise latitude and longitude for each activity.
+5. **Activity Scheduling Agent:** Takes the geocoded activities and live events and organizes them into a logical, day-by-day `DailyPlan`.
+6. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
+7. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
+8. **Map Generator Node:** As the final step after the text report is created, this node takes the geocoded itinerary and generates an interactive `folium` map, displaying it in the Markdown file.
+9.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
 8. **FastAPI Endpoint:** The endpoint returns the final report as a JSON response to the React client.
 
 
@@ -61,9 +64,11 @@ graph TD
             E{Hotel Agent}
             F(Activity Extraction)
             J(Event Agent)
+            K(Geocoding Agent)
             G(Activity Scheduling)
             H(Evaluator Agent)
             I(Report Formatter)
+            L(Map Generator)
         end
     end
 
@@ -71,13 +76,15 @@ graph TD
     A -- "POST Request with user_query" --> B
     B -- "Invokes Agent" --> C
     C --> D & E
-    D & E -- "Base Plan" --> F & J
-    F --> G
+    D & E --> F & J
+    F --> K
+    K --> G
     J --> G
     G --> H
     H -- "Refine Hotel" --> E
     H -- "Refine Flight" --> D
-    H -- "Plan OK / Max Retries" --> I
+    H -- "Plan OK / Max Retries" --> L
+    L --> I
     I -- "Markdown Report" --> B
     B -- "JSON Response with Report" --> A
  ```
@@ -95,6 +102,8 @@ Category | Tool/Library | Purpose |
 `Backend` | **FastAPI** | A high-performance Python framework for building the API server. |
 | | **Uvicorn** | The ASGI server that runs the FastAPI application.  |
 | | **Python 3.10+** | The core programming language for the backend and agent logic. |
+| | **Folium** | Generates interactive HTML maps to visualize the itinerary. 
+| | **Geopy** | Geocoding library to convert location names into coordinates.|
 `Frontend` | **React** |Building the interactive user interface. |
 | | **Vite** | A modern, fast frontend build tool and development server. |
 | | **Axios** | Making HTTP requests from the client to the backend API. |
@@ -224,3 +233,4 @@ After processing, the application renders a complete and detailed travel plan di
 -   **Curated Hotel Selection:** The chosen hotel with its rating and total price for the stay.
 -  **Live Event Recommendations:** A selected list of concerts, shows, and other live events happening in the city during the travel dates, complete with links for more details.
 -   **A Day-by-Day Itinerary:** A logical schedule of activities and experiences tailored to the user's interests, with actual dates for each day.
+-   **An Interactive Itinerary Map:** A final HTML map file is generated, plotting all scheduled activities with numbered markers, providing a complete visual guide for the trip.
