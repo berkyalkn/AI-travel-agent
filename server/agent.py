@@ -881,23 +881,32 @@ def activity_scheduling_agent(state: TripState) -> dict:
 
     planner_llm = llm.bind_tools([ScheduledActivities])
     
+    activities_for_prompt = [
+        {
+            "name": act.name,
+            "description": act.description,
+            "location": act.location,
+            "time_of_day": act.time_of_day
+        }
+        for act in activities
+    ]
+
     prompt = f"""
     You are an expert travel planner. Your task is to organize the following list of activities into a logical daily schedule for a {trip_plan.days}-day trip.
 
     **Chain of Thought Process:**
     1.  First, review all the activities provided.
-    2.  Second, group them logically by location or type (e.g., all museums together, all food places together).
-    3.  Third, distribute these groups across the {trip_plan.days} days to create a sensible flow. Avoid putting too many heavy activities on the same day.
+    2.  Second, group them logically by location or type.
+    3.  Third, distribute these groups across the {trip_plan.days} days to create a sensible flow.
     4.  Fourth, ensure the final JSON output strictly adheres to the `ScheduledActivities` schema.
 
     **CRITICAL INSTRUCTIONS:**
-    - The `day` field must be an integer (e.g., 1, 2, 3).
-    - The `activities` field for each day must be a list of activity objects.
-    - **If you run out of activities, DO NOT include any subsequent empty days in the plan.** The plan must ONLY contain days that have at least one activity.
-    - The final output MUST be a single, valid JSON object that perfectly matches the `ScheduledActivities` schema.
+    - The `day` field must be an integer.
+    - The `activities` field for each day must be a list of activity objects. Each object must ONLY contain 'name', 'description', 'location', and 'time_of_day' fields.
+    - If you run out of activities, DO NOT include any subsequent empty days.
 
     **LIST OF PRE-APPROVED ACTIVITIES TO SCHEDULE:**
-    {json.dumps([act.model_dump() for act in activities])}
+    {json.dumps(activities_for_prompt)}
 
     Now, following the process above, create the `ScheduledActivities` JSON object.
     """
@@ -1042,6 +1051,21 @@ def should_refine_or_end(state: TripState):
         if current_index + 1 < len(state['flight_options']):
             state['selected_flight'] = state['flight_options'][current_index + 1]
         return "refine_flight"
+
+
+def route_after_search(state: TripState) -> str:
+    """
+    Checks if the agent is in a refinement loop.
+    If yes, routes directly back to the evaluator.
+    If no (initial run), continues the full planning process.
+    """
+    
+    if state.get("refinement_count", 0) > 0:
+        print("-> Refinement detected. Routing directly back to evaluator.")
+        return "re_evaluate"
+    else:
+        print("-> Initial run. Continuing with full plan.")
+        return "continue_plan"
 
 
     
@@ -1262,7 +1286,8 @@ workflow.add_node("flight_agent", flight_agent)
 workflow.add_node("hotel_agent", hotel_agent)
 workflow.add_node("activity_extraction_agent", activity_extraction_agent)
 workflow.add_node("geocoding_agent", geocoding_agent)
-workflow.add_node("event_agent", event_agent) 
+workflow.add_node("event_agent", event_agent)
+workflow.add_node("data_aggregator_agent", data_aggregator_agent) 
 workflow.add_node("activity_scheduling_agent", activity_scheduling_agent)
 workflow.add_node("evaluator_agent", evaluator_agent)
 workflow.add_node("report_formatter_node", report_formatter_node) 
@@ -1274,15 +1299,31 @@ workflow.add_edge(START, "planner_agent")
 workflow.add_edge("planner_agent", "flight_agent")
 workflow.add_edge("planner_agent", "hotel_agent")
 
-workflow.add_edge("flight_agent", "activity_extraction_agent")
-workflow.add_edge("hotel_agent", "activity_extraction_agent")
-workflow.add_edge("flight_agent", "event_agent")
-workflow.add_edge("hotel_agent", "event_agent")
+workflow.add_conditional_edges(
+    "flight_agent",
+    route_after_search,
+    {
+        "continue_plan": "data_aggregator_agent", 
+        "re_evaluate": "evaluator_agent"             
+    }
+)
+workflow.add_conditional_edges(
+    "hotel_agent",
+    route_after_search,
+    {
+        "continue_plan": "data_aggregator_agent", 
+        "re_evaluate": "evaluator_agent"      
+    }
+)
 
+
+workflow.add_edge("data_aggregator_agent", "activity_extraction_agent")
+workflow.add_edge("data_aggregator_agent", "event_agent")
 
 workflow.add_edge("activity_extraction_agent", "geocoding_agent")
 workflow.add_edge("geocoding_agent", "activity_scheduling_agent") 
 workflow.add_edge("event_agent", "activity_scheduling_agent")
+
 
 workflow.add_edge("activity_scheduling_agent", "evaluator_agent")
 
@@ -1296,10 +1337,12 @@ workflow.add_conditional_edges(
     }
 )
 
+
 workflow.add_edge("map_generator_node", "report_formatter_node")
 workflow.add_edge("report_formatter_node", END)
 
 
 app = workflow.compile()
+
 
 
