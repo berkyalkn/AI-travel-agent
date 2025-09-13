@@ -1269,7 +1269,6 @@ def report_formatter_node(state: TripState) -> dict:
         if map_html_content:
             md += "\n---\n\n## 📍 Interactive Trip Map\n"
             md += "Click on the numbered pins to see activity details.\n\n"
-            md += f'<div style="border: 1px solid #e1e1e1; border-radius: 8px; overflow: hidden; height: 500px;">{map_html_content}</div>'
 
         final_report_md = md
 

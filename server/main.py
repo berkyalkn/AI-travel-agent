@@ -36,11 +36,16 @@ async def plan_trip(request: PlanRequest):
         final_state = travel_agent_app.invoke(initial_state)
         
         final_report_markdown = final_state.get("markdown_report")
-        
+        map_html_content = final_state.get("map_html")
+
         if final_report_markdown:
-            return {"report": final_report_markdown}
+            return {
+                "markdown_report": final_report_markdown,
+                "map_html": map_html_content
+            }
         else:
             return {"error": "Failed to generate the final report markdown."}
+        
 
     except Exception as e:
         print(f"AN ERROR OCCURRED: {e}")        

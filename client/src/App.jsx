@@ -19,7 +19,7 @@ function App() {
   });
 
 
-  const [report, setReport] = useState(null);
+  const [reportData, setReportData] = useState({ markdown: '', map: null });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -28,7 +28,7 @@ function App() {
   const handlePlanTrip = async () => {
 
     setErrors({});
-    setReport(null);
+    setReportData({ markdown: '', map: null });
     setIsLoading(true);
 
     const validateForm = () => {
@@ -58,12 +58,16 @@ function App() {
 
    
     setIsLoading(true);
-    setReport('');
+    setReportData('');
 
     try {
       const response = await axios.post(API_URL, { user_query });
-      if (response.data && response.data.report) {
-        setReport(response.data.report);
+      
+      if (response.data && response.data.markdown_report) {
+        setReportData({
+          markdown: response.data.markdown_report,
+          map: response.data.map_html
+        });
       } else {
         setErrors({ form: response.data.error || 'An unknown error occurred.' });
       }
@@ -89,7 +93,7 @@ function App() {
         <ReportDisplay 
           isLoading={isLoading}
           error={errors.form}
-          report={report}
+          reportData={reportData}
         />
       </div>
     </div>
