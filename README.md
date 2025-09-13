@@ -37,15 +37,18 @@ The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node
 ### Backend Workflow
 
 1.  **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
-2. **Parallel Data Gathering (Flight & Hotel Agents):** These agents run concurrently. They query live APIs for all possible flight and hotel options and use an LLM to make an initial selection based on a balance of cost and quality.
-3. **Parallel Information Gathering (Activities & Events):** After the initial selections, two agents work concurrently:
-    - **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest based on user's interests.
-    - **Event Agent:** Queries the Ticketmaster API to find live events like concerts and shows for the travel dates.
-4. **Geocoding Agent:** After activities are extracted, this agent takes the list of locations and uses a geocoding tool (`geopy`) to find the precise latitude and longitude for each activity.
-5. **Activity Scheduling Agent:** Takes the geocoded activities and live events and organizes them into a logical, day-by-day `DailyPlan`.
-6. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan (flight, hotel, costs) against user constraints and the available alternatives. It performs a strategic, value-based analysis to decide if the plan is optimal.
-7. **Multi-Path Self-Correction Loop:** Based on the Evaluator's strategic decision, the graph uses a conditional edge to either approve the plan or trigger a self-correction loop. The loop can intelligently route the process back to the hotel_agent to find a cheaper hotel or back to the flight_agent to find a cheaper flight, depending on where the best potential saving lies.
-8. **Map Generator Node:** As the final step after the text report is created, this node takes the geocoded itinerary and generates an interactive `folium` map, displaying it in the Markdown file.
+2. **Parallel Initial Data Gathering (Flight, Hotel & Event Agents):** The system simultaneously initiates three independent searches for flights, hotels, and live events, significantly speeding up the data collection phase.
+3. **Data Aggregator:** Acts as a synchronization barrier, waiting for all three parallel searches (flight, hotel, and event) to complete before proceeding.
+4. **Sequential Enrichment Pipeline:** To ensure data integrity and prevent race conditions, the following steps are performed in a strict sequence:
+
+    + **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest based on the user's interests.
+
+    + **Geocoding Agent:** Takes the extracted activities and enriches them with precise latitude and longitude coordinates.
+
+    + **Activity Scheduling Agent:** Organizes the geocoded activities and events into a logical, day-by-day DailyPlan.
+5. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan against user constraints and available alternatives, performing a strategic, value-based analysis to decide if the plan is optimal.
+6. **Efficient Self-Correction Loop:** Based on the Evaluator's decision, a conditional edge either approves the plan or triggers a targeted refinement loop directly back to the hotel_agent or flight_agent.
+7. **Map Generator Node:** Once the plan is approved, this node generates an interactive folium map from the final geocoded itinerary.
 9.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
 8. **FastAPI Endpoint:** The endpoint returns the final report as a JSON response to the React client.
 
@@ -62,28 +65,36 @@ graph TD
             C(Planner Agent)
             D{Flight Agent}
             E{Hotel Agent}
-            F(Activity Extraction)
             J(Event Agent)
+            Agg(Data Aggregator)
+            F(Activity Extraction)
             K(Geocoding Agent)
             G(Activity Scheduling)
-            H(Evaluator Agent)
-            I(Report Formatter)
+            H{Evaluator Agent}
             L(Map Generator)
+            I(Report Formatter)
         end
     end
 
-    
     A -- "POST Request with user_query" --> B
-    B -- "Invokes Agent" --> C
-    C --> D & E
-    D & E --> F & J
+    B --> C
+
+    C --> D
+    C --> E
+    C --> J
+    D --> Agg
+    E --> Agg
+    J --> Agg
+
+    Agg --> F
     F --> K
     K --> G
-    J --> G
     G --> H
-    H -- "Refine Hotel" --> E
-    H -- "Refine Flight" --> D
-    H -- "Plan OK / Max Retries" --> L
+
+    H -->|Refine Hotel| E
+    H -->|Refine Flight| D
+    H -->|Plan OK / Max Retries| L
+
     L --> I
     I -- "Markdown Report" --> B
     B -- "JSON Response with Report" --> A
@@ -218,7 +229,7 @@ This project is a practical implementation of several advanced concepts in AI en
 -   **Structured Output:** Forcing all LLM outputs, from initial planning (TripRequest) to the final plan (Itinerary) and evaluation (EvaluationResult), into reliable Pydantic schemas to ensure data integrity and predictable workflows.
 -   **Tool Binding & Live API Integration:** Enabling agents to use external functions to gather information from live, real-time APIs (for flights and hotels) and the unstructured web (for activities via Tavily Search).
 -   **Parallelization:** Executing independent data-gathering tasks (flight and hotel searches) concurrently to significantly reduce total execution time.
--   **Advanced Routing & Conditional Logic:** Using conditional edges to create a multi-path, self-correcting loop. The graph dynamically routes its own execution path back to different agents (hotel_agent or flight_agent) based on the strategic output of the Evaluator agent.
+-   **Advanced Routing & State-Aware Logic:** The graph uses conditional edges not just to create a self-correcting loop, but to create an **efficient, state-aware refinement cycle**. By checking the `refinement_count`, the graph dynamically alters its path, bypassing expensive data gathering steps during refinement to significantly improve performance and reduce costs.
 -   **Stateful Multi-Agent Orchestration:** Using LangGraph to manage a complex, multi-step process where multiple specialized agents collaborate and share information through a persistent state (TripState).
 -   **Evaluation & Reflection:** Creating a dedicated Evaluator agent that critiques the system's own output against user constraints and available alternatives, enabling true autonomous decision-making and refinement.
 -   **Complex Intent Parsing & Slot Filling:** The `Planner Agent` demonstrates robust NLU capabilities. It not only parses primary constraints (destination, budget) but also extracts secondary, nuanced details like the `daily_spending_budget` from a single, unstructured sentence.
