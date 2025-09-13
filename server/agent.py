@@ -789,6 +789,14 @@ def event_agent(state: TripState) -> dict:
     return {"events": selected_list.events}
 
 
+def data_aggregator_agent(state: TripState) -> dict:
+    """A simple node to act as a synchronization point for parallel branches."""
+    print("--- Aggregating Flight, Hotel, and Event data ---")
+   
+    return {}
+
+
+
 def activity_extraction_agent(state: TripState) -> dict:
     """
     Analyzes the raw text from Tavily and extracts a structured list of activities.
@@ -837,7 +845,6 @@ def activity_extraction_agent(state: TripState) -> dict:
     return {"extracted_activities": extracted.activities}
 
 
-
 def geocoding_agent(state: TripState) -> dict:
     """
     Takes the list of extracted activities and enriches them with coordinates.
@@ -847,16 +854,15 @@ def geocoding_agent(state: TripState) -> dict:
     if not activities:
         return {}
 
-    enriched_activities = []
     for activity in activities:
         search_query = f"{activity.name}, {state['trip_plan'].destination}"
         coords = geocoding_tool.invoke(search_query)
         if coords:
             activity.latitude = coords['latitude']
             activity.longitude = coords['longitude']
-        enriched_activities.append(activity)
     
-    return {"extracted_activities": enriched_activities}
+    return {"extracted_activities": activities}
+
 
 
 
@@ -866,6 +872,12 @@ def activity_scheduling_agent(state: TripState) -> dict:
     Then, it manually combines this schedule with flight and hotel info to create the final itinerary.
     """
     print("--- Running Activity Scheduling Agent ---")
+
+    activities = state.get("extracted_activities", [])
+    events = state.get("events", [])
+    print(f"-> Received {len(activities)} activities and {len(events)} events to schedule.")
+
+
     trip_plan = state['trip_plan']
     selected_flight = state['selected_flight']
     selected_hotel = state['selected_hotel']
@@ -874,12 +886,14 @@ def activity_scheduling_agent(state: TripState) -> dict:
     if not all([trip_plan, selected_flight, selected_hotel]):
         print("-> Missing data, cannot schedule.")
         return {"final_itinerary": None} 
+
     if not activities:
         print("-> No activities to schedule. Creating an itinerary with only flight and hotel.")
         itinerary = Itinerary(selected_flight=selected_flight, selected_hotel=selected_hotel, daily_plans=[])
         return {"final_itinerary": itinerary}
 
-    planner_llm = llm.bind_tools([ScheduledActivities])
+
+    geocoded_activities_lookup = {act.name: act for act in activities}
     
     activities_for_prompt = [
         {
@@ -890,6 +904,9 @@ def activity_scheduling_agent(state: TripState) -> dict:
         }
         for act in activities
     ]
+
+
+    planner_llm = llm.bind_tools([ScheduledActivities])
 
     prompt = f"""
     You are an expert travel planner. Your task is to organize the following list of activities into a logical daily schedule for a {trip_plan.days}-day trip.
@@ -917,6 +934,14 @@ def activity_scheduling_agent(state: TripState) -> dict:
         
     tool_call = ai_message.tool_calls[0]
     scheduled_activities = ScheduledActivities(**tool_call['args'])
+
+    for day_plan in scheduled_activities.daily_plans:
+        for scheduled_activity in day_plan.activities:
+
+            original_activity = geocoded_activities_lookup.get(scheduled_activity.name)
+            if original_activity:
+                scheduled_activity.latitude = original_activity.latitude
+                scheduled_activity.longitude = original_activity.longitude
     
     final_itinerary = Itinerary(
         selected_flight=selected_flight,
@@ -924,10 +949,9 @@ def activity_scheduling_agent(state: TripState) -> dict:
         daily_plans=scheduled_activities.daily_plans
     )
     
-    print("-> Final Itinerary Assembled Successfully.")
+    print("-> Final Itinerary Assembled Successfully with Geocoded Data.")
     return {"final_itinerary": final_itinerary}
-
-
+    
 
 
 def evaluator_agent(state: TripState) -> dict:
@@ -944,7 +968,7 @@ def evaluator_agent(state: TripState) -> dict:
 
     if not all([trip_plan, selected_flight, selected_hotel]):
         return { "evaluation_result": EvaluationResult(action="APPROVE", feedback="Could not evaluate due to missing data.", total_cost=0) }
-        
+
     flight_and_hotel_cost = selected_flight.price + selected_hotel.total_price 
 
     daily_spending = trip_plan.daily_spending_budget if trip_plan.daily_spending_budget else 0
@@ -1053,26 +1077,17 @@ def should_refine_or_end(state: TripState):
         return "refine_flight"
 
 
-def route_after_search(state: TripState) -> str:
-    """
-    Checks if the agent is in a refinement loop.
-    If yes, routes directly back to the evaluator.
-    If no (initial run), continues the full planning process.
-    """
-    
-    if state.get("refinement_count", 0) > 0:
-        print("-> Refinement detected. Routing directly back to evaluator.")
-        return "re_evaluate"
-    else:
-        print("-> Initial run. Continuing with full plan.")
-        return "continue_plan"
-
-
-    
 def map_generator_node(state: TripState) -> dict:
     """Generates an interactive Folium map from the final itinerary and returns its HTML content."""
     print("--- Running Map Generator ---")
     final_itinerary = state.get("final_itinerary")
+
+    if final_itinerary and final_itinerary.daily_plans:
+        geocoded_count = sum(1 for day in final_itinerary.daily_plans for act in day.activities if act.latitude)
+        print(f"-> Itinerary received. Found {geocoded_count} geocoded activities to plot on the map.")
+    
+    
+
     if not final_itinerary or not final_itinerary.daily_plans:
         return {"map_html": None} 
 
@@ -1242,11 +1257,11 @@ def report_formatter_node(state: TripState) -> dict:
                     md += f"  - *{activity.description}*\n"
                 
                     if activity.latitude and activity.longitude:
-                        location_url = f"https://www.google.com/maps/search/?api=1&query={activity.latitude},{activity.longitude}"
-                        md += f"  - Location: [{activity.location}]({location_url})\n"
+                        location_url = f"https://www.google.com/maps?q={activity.latitude},{activity.longitude}"
+                        md += f"  - Location: [{activity.name}]({location_url})\n"
                     else:
-                        location_url = f"https://www.google.com/maps/search/?api=1&query={activity.location.replace(' ', '+')}+{trip_plan.destination.replace(' ', '+')}"
-                        md += f"  - Location: [{activity.location}]({location_url})\n"
+                        location_url = f"https://www.google.com/maps?q={activity.name.replace(' ', '+')}+{trip_plan.destination.replace(' ', '+')}"
+                        md += f"  - Location: [{activity.name}]({location_url})\n"
                 
                     activity_counter += 1
 
@@ -1291,38 +1306,24 @@ workflow.add_node("data_aggregator_agent", data_aggregator_agent)
 workflow.add_node("activity_scheduling_agent", activity_scheduling_agent)
 workflow.add_node("evaluator_agent", evaluator_agent)
 workflow.add_node("report_formatter_node", report_formatter_node) 
-workflow.add_node("map_generator_node", map_generator_node) 
+workflow.add_node("map_generator_node", map_generator_node)
 
 
 workflow.add_edge(START, "planner_agent")
 
 workflow.add_edge("planner_agent", "flight_agent")
 workflow.add_edge("planner_agent", "hotel_agent")
+workflow.add_edge("planner_agent", "event_agent")
 
-workflow.add_conditional_edges(
-    "flight_agent",
-    route_after_search,
-    {
-        "continue_plan": "data_aggregator_agent", 
-        "re_evaluate": "evaluator_agent"             
-    }
-)
-workflow.add_conditional_edges(
-    "hotel_agent",
-    route_after_search,
-    {
-        "continue_plan": "data_aggregator_agent", 
-        "re_evaluate": "evaluator_agent"      
-    }
-)
-
+workflow.add_edge("flight_agent", "data_aggregator_agent")
+workflow.add_edge("hotel_agent", "data_aggregator_agent")
+workflow.add_edge("event_agent", "data_aggregator_agent")
 
 workflow.add_edge("data_aggregator_agent", "activity_extraction_agent")
-workflow.add_edge("data_aggregator_agent", "event_agent")
 
 workflow.add_edge("activity_extraction_agent", "geocoding_agent")
-workflow.add_edge("geocoding_agent", "activity_scheduling_agent") 
-workflow.add_edge("event_agent", "activity_scheduling_agent")
+
+workflow.add_edge("geocoding_agent", "activity_scheduling_agent")
 
 
 workflow.add_edge("activity_scheduling_agent", "evaluator_agent")
