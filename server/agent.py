@@ -314,8 +314,15 @@ def flight_search_tool(origin_iata_list: List[str], destination_iata_list: List[
                         total_duration_minutes=total_duration
                     ))
             except Exception as e:
-                print(f"-> API request failed for {origin_iata} -> {destination_iata}: {e}")
-                continue
+                print(f"!!! FLIGHT API ERROR for {origin_iata} -> {destination_iata} !!!")
+                if hasattr(e, 'response') and e.response is not None:
+
+                    print(f"Status Code: {e.response.status_code}")
+                    print(f"Response Text: {e.response.text}")
+                    
+                else:
+                    print(f"An unexpected error occurred: {e}")
+                    continue
 
     if not all_flight_options:
         print("-> No valid flights parsed from the response.")
@@ -424,7 +431,12 @@ def hotel_search_tool(location_id: str, start_date: str, end_date: str, person: 
         return results
 
     except Exception as e:
-        print(f"-> Hotel search or parsing failed: {e}")
+        print(f"!!! HOTEL API ERROR for Location ID: {location_id[:30]}... !!!")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Status Code: {e.response.status_code}")
+            print(f"Response Text: {e.response.text}")
+        else:
+            print(f"An unexpected error occurred: {e}")
         return []
 
 
@@ -817,20 +829,23 @@ def activity_extraction_agent(state: TripState) -> dict:
     
     prompt = f"""
     You are a data extraction expert. Your task is to analyze the provided text from a web search
-    and extract all specific, real-world places, landmarks, or experiences mentioned.
+    and extract all specific, physical, and geocodable places.
 
-    CRITICAL INSTRUCTIONS:
-    - Focus only on concrete nouns (e.g., 'Rijksmuseum', 'Anne Frank House').
-    - Ignore generic suggestions like 'explore the city' or 'go on a food tour'.
-    - For each extracted activity, create a structured object with `name`, `description`, `location`, and a suitable `time_of_day`.
-    - **Crucially, for the `location` field, you MUST provide a specific, geocodable address or neighborhood if possible. If not, you MUST use the city name: "{state['trip_plan'].destination}"**. This is vital for the mapping agent that will use this data.
+    **CRITICAL INSTRUCTIONS:**
+    -   You MUST extract **only real, physical locations** like museums, monuments, parks, squares, famous buildings, or specific neighborhoods.
+    -   You MUST **AVOID** extracting temporary items like event names, exhibitions, festivals, awards, or abstract concepts (e.g., "art-house cinema under the stars").
+    -   For each extracted place, provide a `name`, `description`, `location` (city name: "{state['trip_plan'].destination}"), and a suitable `time_of_day`.
 
-    RAW SEARCH RESULTS:
+    **Example of what to do:**
+    -   Good Extraction (Physical Place): "Colosseum", "Vatican Museums", "Trastevere Neighborhood"
+    -   Bad Extraction (Event/Concept): "International Organ Festival", "From Pop to Eternity exhibition"
+
+    **RAW SEARCH RESULTS:**
     ---
     {raw_activity_data}
     ---
 
-    Now, call the `ExtractedActivities` function with the list of all the activities you found.
+    Now, call the `ExtractedActivities` function with the list of all the **physical places** you found.
     """
     
     ai_message = extraction_llm.invoke(prompt)
@@ -1017,14 +1032,13 @@ def evaluator_agent(state: TripState) -> dict:
       (This change would save approximately €{potential_flight_saving:.2f})
 
     **Decision Rules:**
-    1.  If the plan is within budget, 'APPROVE' it unless there's an alternative that offers a clear and significant upgrade for a very small price increase.
-    2.  If the plan is over budget, you MUST choose a 'REFINE' action. To decide which one, consider the trade-offs:
-        -   Don't just pick the one with the highest monetary saving.
-        -   Analyze the **value**: Is the hotel saving large but comes with a huge drop in rating? Is the flight saving smaller but has almost no downside (e.g., same airline, slightly longer duration)?
-        -   Choose the refinement (`REFINE_HOTEL` or `REFINE_FLIGHT`) that provides the **best overall value improvement for the user**.
-    3.  If the plan is over budget but no cheaper options are available, 'APPROVE' but state the reason in your feedback.
+    1.  If the plan is within budget, 'APPROVE' it.
+    2.  **CRITICAL RULE: If the plan is OVER budget, you MUST choose a 'REFINE' action.** Your primary goal is to get the cost under budget.
+        -   Compare the potential savings from refining the hotel vs. the flight.
+        -   Choose the refinement (`REFINE_HOTEL` or `REFINE_FLIGHT`) that provides the **largest monetary saving**. A drop in hotel rating is acceptable if it brings the plan back into budget.
+    3.  If the plan is over budget but no cheaper options are available (e.g., potential savings are zero or negative), you can 'APPROVE' it, but clearly state in your feedback that no better options could be found within the budget.
 
-    Based on these rules, call the `EvaluationResult` function with your decision and a clear reasoning.
+    Based on these strict rules, call the `EvaluationResult` function with your decision.
     """
     
     ai_message = evaluator_llm.invoke(prompt)
