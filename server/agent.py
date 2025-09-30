@@ -641,17 +641,20 @@ def flight_agent(state: TripState) -> dict:
         options_text += f"Option {i}: Airline: {airline}, Price: €{opt.price:.2f}, Total Duration: {total_duration} minutes.\n"
 
     prompt = f"""
-    You are an expert travel agent. Your task is to select the best flight from the list below.
-    The user is budget-conscious but also values their time. Find the best balance between price and duration.
-    A slightly more expensive flight that is significantly faster is often a better choice.
+    You are an expert travel agent. Your task is to select the best flight from the list below, balancing cost, convenience, and total travel time.
 
-    USER PREFERENCES:
-    - Budget: €{trip_plan.budget}
+    **CRITICAL INSTRUCTIONS FOR LAYOVERS:**
+    -   **Total travel time is paramount.** A cheap flight with an extremely long layover (e.g., more than 5 hours) is a BAD choice.
+    -   Analyze the `layover_duration_minutes` for both departure and return legs.
+    -   Strongly penalize any option with an excessive layover. A direct flight or one with a short layover (under 4 hours) is much more valuable than saving a small amount of money.
 
-    FLIGHT OPTIONS:
+    **USER PREFERENCES:**
+    -   Budget: €{trip_plan.budget}
+
+    **FLIGHT OPTIONS:**
     {options_text}
 
-    Analyze the options and decide which one offers the best value. Call the `FlightSelection` function with your decision.
+    Analyze the options considering price, total flight duration, AND total layover time. Select the option that provides the most convenient and time-efficient journey for the user. Call the `FlightSelection` function with your decision.
     """
 
     ai_message = selection_llm.invoke(prompt)
@@ -932,15 +935,17 @@ def activity_scheduling_agent(state: TripState) -> dict:
     3.  Third, distribute these groups across the {trip_plan.days} days to create a sensible flow.
     4.  Fourth, ensure the final JSON output strictly adheres to the `ScheduledActivities` schema.
 
-    **CRITICAL INSTRUCTIONS:**
-    - The `day` field must be an integer.
-    - The `activities` field for each day must be a list of activity objects. Each object must ONLY contain 'name', 'description', 'location', and 'time_of_day' fields.
-    - If you run out of activities, DO NOT include any subsequent empty days.
+    **CRITICAL INSTRUCTIONS FOR A REALISTIC PLAN:**
+    1.  **Group by Proximity:** Analyze the locations. Try to group activities that are geographically close to each other into the same day to minimize travel time.
+    2.  **Consider Activity Scale:** Be realistic about timing. A major theme park (like Disneyland) or a day trip (like Mt. Fuji) takes a full day. Do not schedule other major activities on the same day. A museum might take half a day.
+    3.  **Logical Flow:** Create a plan that flows naturally. Don't have the user zig-zagging across the city.
+    4.  **Avoid Redundancy:** Do not schedule hotels (like Hotel MiraCosta) as activities.
+    5.  **No Empty Days:** If you run out of activities, do not include empty days.
 
     **LIST OF PRE-APPROVED ACTIVITIES TO SCHEDULE:**
     {json.dumps(activities_for_prompt)}
 
-    Now, following the process above, create the `ScheduledActivities` JSON object.
+    Now, create the most logical and efficient `ScheduledActivities` JSON object.
     """
     
     ai_message = planner_llm.invoke(prompt)
