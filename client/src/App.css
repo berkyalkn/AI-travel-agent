@@ -305,3 +305,15 @@ button:disabled {
   align-items: center;
   gap: 8px; 
 }
+
+.loading-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.agent-status {
+  margin-top: 1rem;
+  color: var(--text-light);
+  font-weight: 500;
+  font-size: 1rem;
+}
