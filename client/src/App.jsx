@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import './App.css';
 
 import Header from './components/Header';
@@ -27,17 +27,19 @@ function App() {
     daily_spending_budget: '' 
   });
 
+  const [agentStatus, setAgentStatus] = useState('');
 
   const [reportData, setReportData] = useState({ markdown: '', map: null });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const API_URL = `${import.meta.env.VITE_API_URL}/plan-trip`;
+  const API_URL = `${import.meta.env.VITE_API_URL}/plan-trip-stream`;
 
   const handlePlanTrip = async () => {
 
     setErrors({});
     setReportData({ markdown: '', map: null });
+    setAgentStatus('Connecting to the AI Travel Agent...'); 
     setIsLoading(true);
 
     const validateForm = () => {
@@ -71,23 +73,59 @@ function App() {
     setIsLoading(true);
     setReportData({ markdown: '', map: null });
 
-    try {
-      const response = await axios.post(API_URL, { user_query });
-      
-      if (response.data && response.data.markdown_report) {
-        setReportData({
-          markdown: response.data.markdown_report,
-          map: response.data.map_html
-        });
-      } else {
-        setErrors({ form: response.data.error || 'An unknown error occurred.' });
+    await fetchEventSource(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user_query }),
+
+      async onopen(response) {
+        const contentType = response.headers.get('content-type');
+        console.log("Content-Type header from server:", contentType);
+    
+        if (response.ok && contentType && contentType.startsWith('text/event-stream')) {
+          console.log("Stream connection successfully established.");
+        } else {
+          console.error(`Stream could not be opened. Expected 'text/event-stream', but received '${contentType}'`, response);
+          setErrors({ form: `Server connection error. Invalid content type: ${contentType || 'None received'}` });
+          setIsLoading(false);
+        }
+      },
+
+      onmessage(event) {
+        if (event.event === 'status') {
+          const data = JSON.parse(event.data);
+          setAgentStatus(data.message);
+        } else if (event.event === 'final_report') {
+          const data = JSON.parse(event.data);
+          setReportData({
+            markdown: data.markdown_report,
+            map: data.map_html
+          });
+          setAgentStatus('Your itinerary is ready!');
+          setIsLoading(false);
+        } else if (event.event === 'error') {
+            const data = JSON.parse(event.data);
+            setErrors({ form: data.message || 'An error occurred during planning.' });
+            setIsLoading(false);
+        }
+      },
+
+      onclose() {
+        console.log("Connection closed by the server.");
+        if (isLoading) {
+            setIsLoading(false);
+            setAgentStatus("Stream ended before the report was complete.");
+        }
+      },
+
+      onerror(err) {
+        console.error("Stream connection error:", err);
+        setErrors({ form: "Failed to connect to the streaming server. Check the console for details." });
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      setErrors({ form: 'Failed to connect to the backend server.' });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
@@ -105,6 +143,7 @@ function App() {
           isLoading={isLoading}
           error={errors.form}
           reportData={reportData}
+          agentStatus={agentStatus} 
         />
       </div>
     </div>
