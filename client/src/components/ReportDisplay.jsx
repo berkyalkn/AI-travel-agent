@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { motion } from 'framer-motion';
 
 function ReportDisplay({ isLoading, error, reportData }) {
   if (isLoading) {
@@ -14,7 +15,13 @@ function ReportDisplay({ isLoading, error, reportData }) {
 
   if (reportData && reportData.markdown) {
     return (
-      <main className="report-container">
+      <motion.main
+            className="report-container"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+
         <div className="markdown-content">
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
@@ -42,7 +49,7 @@ function ReportDisplay({ isLoading, error, reportData }) {
             </div>
           )}
         </div>
-      </main>
+      </motion.main>
     );
   }
   
