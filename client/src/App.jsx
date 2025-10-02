@@ -6,12 +6,21 @@ import Header from './components/Header';
 import InputForm from './components/InputForm';
 import ReportDisplay from './components/ReportDisplay';
 
+const formatDate = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 function App() {
 
   const [formData, setFormData] = useState({
     destination: '',
     origin: '',
-    dates: '',
+    startDate: null,
+    endDate: null,
     people: '',
     budget: '',
     interests: '',
@@ -23,7 +32,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const API_URL = 'http://127.0.0.1:8000/plan-trip';
+  const API_URL = `${import.meta.env.VITE_API_URL}/plan-trip`;
 
   const handlePlanTrip = async () => {
 
@@ -35,7 +44,7 @@ function App() {
       const newErrors = {};
       if (!formData.destination) newErrors.destination = "Destination is required.";
       if (!formData.origin) newErrors.origin = "Origin is required.";
-      if (!formData.dates) newErrors.dates = "Dates are required.";
+      if (!formData.startDate || !formData.endDate) newErrors.dates = "Start and end dates are required.";
       if (!formData.people) newErrors.people = "Number of people is required.";
       if (!formData.budget) newErrors.budget = "Budget is required.";
       if (!formData.interests) newErrors.interests = "Please list at least one interest.";
@@ -52,13 +61,15 @@ function App() {
       return;
     }
 
-    const { destination, origin, dates, people, budget, interests, daily_spending_budget } = formData;
+    const { destination, origin, startDate, endDate, people, budget, interests, daily_spending_budget } = formData;
 
-    const user_query = `Plan a trip to ${destination} from ${origin}. Dates: ${dates}. Number of people: ${people}. Our budget is around ${budget}. We are interested in ${interests}. Also, we plan to have a daily spending budget of about ${daily_spending_budget} per person.`;
+    const formattedDates = `${formatDate(startDate)} to ${formatDate(endDate)}`;
+
+    const user_query = `Plan a trip to ${destination} from ${origin}. Dates: ${formattedDates}. Number of people: ${people}. Our budget is around ${budget}. We are interested in ${interests}. Also, we plan to have a daily spending budget of about ${daily_spending_budget} per person.`;
 
    
     setIsLoading(true);
-    setReportData('');
+    setReportData({ markdown: '', map: null });
 
     try {
       const response = await axios.post(API_URL, { user_query });
