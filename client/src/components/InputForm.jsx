@@ -2,12 +2,25 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FaPlaneDeparture } from "react-icons/fa";
 
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
 function InputForm({ formData, setFormData, handlePlanTrip, isLoading, errors }) {
   
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevData => ({ ...prevData, [name]: value }));
   };
+
+  const handleDateChange = (dates) => {
+    const [start, end] = dates;
+    setFormData(prevData => ({
+      ...prevData,
+      startDate: start,
+      endDate: end
+    }));
+  };
+
 
   return (
     <div className="guided-form">
@@ -26,7 +39,7 @@ function InputForm({ formData, setFormData, handlePlanTrip, isLoading, errors })
       <div className="form-row">
         <div className="form-group">
           <label htmlFor="dates">Dates</label>
-          <input type="text" id="dates" name="dates" value={formData.dates} onChange={handleChange} placeholder="e.g., 2026-10-15 to 2026-10-20" disabled={isLoading} className={errors.dates ? "input-error" : ""}/>
+          <DatePicker id="dates" selected={formData.startDate} onChange={handleDateChange} startDate={formData.startDate} endDate={formData.endDate} selectsRange placeholderText="e.g., 2026-10-15 to 2026-10-20" dateFormat="yyyy-MM-dd" className={errors.dates ? "input-error" : ""} disabled={isLoading} autoComplete="off"/>
           {errors.dates && <p className="error-message">{errors.dates}</p>}
         </div>
         <div className="form-group">
