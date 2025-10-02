@@ -1,6 +1,10 @@
-from fastapi import FastAPI
+import json
+import asyncio
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+
 
 from agent import app as travel_agent_app
 
@@ -11,11 +15,14 @@ app = FastAPI(
 )
 
 
-origin = "http://localhost:5173", 
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"  
+]
      
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origin,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"], 
@@ -28,6 +35,43 @@ class PlanRequest(BaseModel):
 def read_root():
     return {"status": "AI Travel Agent API is running."}
 
+
+@app.post("/plan-trip-stream")
+async def plan_trip_stream(request: PlanRequest):
+    initial_state = {"user_request": request.user_query}
+
+    async def event_stream():
+        try:
+           
+            async for chunk in travel_agent_app.astream(initial_state):
+                for key, value in chunk.items():
+                    node_name = key
+                    node_output = value
+                    
+                    status_message = f"Working on: {node_name.replace('_', ' ').title()}"
+                    print(f"Streaming status: {status_message}")
+
+                    yield f"event: status\ndata: {json.dumps({'message': status_message})}\n\n"
+                    await asyncio.sleep(0.1) 
+
+            final_state = node_output 
+            final_report_markdown = final_state.get("markdown_report")
+            map_html_content = final_state.get("map_html")
+
+            final_data = {
+                "markdown_report": final_report_markdown,
+                "map_html": map_html_content
+            }
+            yield f"event: final_report\ndata: {json.dumps(final_data)}\n\n"
+
+        except Exception as e:
+            print(f"AN ERROR OCCURRED during stream: {e}")
+            error_message = f"An error occurred: {e}"
+            yield f"event: error\ndata: {json.dumps({'message': error_message})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+"""
 @app.post("/plan-trip")
 async def plan_trip(request: PlanRequest):
     try:
@@ -60,3 +104,4 @@ async def plan_trip(request: PlanRequest):
             return {"error": user_friendly_error}
 
         return {"error": "An unexpected error occurred while planning your trip. Please try again later."}
+"""
