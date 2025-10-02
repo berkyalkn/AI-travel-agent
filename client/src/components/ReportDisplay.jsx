@@ -4,9 +4,14 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { motion } from 'framer-motion';
 
-function ReportDisplay({ isLoading, error, reportData }) {
+function ReportDisplay({ isLoading, error, reportData, agentStatus }) {
   if (isLoading) {
-    return <div className="loading-spinner"></div>;
+    return(
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="agent-status">{agentStatus}</p> 
+      </div>
+    );
   }
 
   if (error) {
