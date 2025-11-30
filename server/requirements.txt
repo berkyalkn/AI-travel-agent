@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+requests
+markdown2
+langchain-groq
+langchain-core
+langgraph
+langchain-tavily
+geopy
+folium
+tenacity
+pathlib
