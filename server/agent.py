@@ -549,8 +549,9 @@ def geocoding_tool(location_name: str) -> Optional[Dict[str, float]]:
     print(f"--- Geocoding: {location_name} ---")
     try:
         geolocator = Nominatim(user_agent="ai-travel-agent")
-        geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
-        location = geocode(location_name)
+        geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1.5, return_value_on_exception=None)
+        location = geocode(location_name, timeout=10)
+        
         if location:
             return {"latitude": location.latitude, "longitude": location.longitude}
         return None
@@ -1295,12 +1296,33 @@ def report_formatter_node(state: TripState) -> dict:
     os.makedirs(output_dir, exist_ok=True)
     md_path = os.path.join(output_dir, "trip_itinerary.md")
     html_path = os.path.join(output_dir, "trip_itinerary.html")
+
     try:
         with open(md_path, "w", encoding="utf-8") as f: f.write(final_report_md)
         print(f"-> Markdown report saved to: {md_path}")
         
-        css_style = """<style> body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 2rem; background: linear-gradient(to right, #f8f9fa, #ffffff); border: 1px solid #e1e1e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px; } h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; } h1 { font-size: 2.5em; text-align: center; } h2 { font-size: 2em; } code { background-color: #ecf0f1; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; } </style>"""
+        css_style = """<style> 
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 2rem; background: linear-gradient(to right, #f8f9fa, #ffffff); border: 1px solid #e1e1e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 8px; } 
+            h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; } 
+            h1 { font-size: 2.5em; text-align: center; } 
+            h2 { font-size: 2em; } 
+            code { background-color: #ecf0f1; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; } 
+            .map-container { margin-top: 30px; border-top: 2px solid #f0f0f0; padding-top: 20px; }
+            iframe { width: 100%; height: 500px; border: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        </style>"""
+
         html_body = markdown2.markdown(final_report_md, extras=["tables", "fenced-code-blocks"])
+
+        if map_html_content:
+            print(f"-> Injecting map into HTML Report (Size: {len(map_html_content)} chars)")
+            html_body += f"""
+            <div class="map-container">
+                <h2>📍 Interactive Trip Map</h2>
+                <p>Click on the numbered pins to see activity details.</p>
+                {map_html_content}
+            </div>
+            """
+        
         full_html = f'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>AI Trip Plan</title>{css_style}</head><body>{html_body}</body></html>'
         with open(html_path, "w", encoding="utf-8") as f: f.write(full_html)
         print(f"-> HTML report saved to: {html_path}")
