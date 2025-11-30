@@ -27,10 +27,13 @@
     RUN pip install --no-cache /wheels/*
     
     COPY . .
+
+    RUN mkdir -p /app/output
     
     RUN addgroup --system appgroup && adduser --system --group appuser
-    RUN chgrp -R 0 /app && \
-        chmod -R g=u /app
+    RUN chown -R appuser:0 /app && \
+    chmod -R g=rwX /app
+
     
     USER appuser
     
