@@ -1,103 +1,134 @@
 
 # Autonomous AI Travel Agent with Self-Correction
 
-An AI travel agent built with React frontend, a FastAPI backend and a LangGraph for cyclical agent orchestration, powered by Groq and Tavily. This project demonstrates a stateful, multi-agent system that can plan, research, write, evaluate, and self-correct to generate a detailed travel itineraries based on a single natural language request, all served through an interactive web interface.
+An AI travel agent built with a Microservices Architecture using React (Nginx) for the frontend and FastAPI for the backend. Orchestrated by LangGraph, this system features a cyclical multi-agent workflow powered by Groq (Llama 3) and Tavily.
+
+It demonstrates a stateful, self-correcting AI system that can plan, research, evaluate, and generate detailed travel itineraries with interactive maps based on a single natural language request. The entire application is containerized with Docker.
 
 ---
 
 ## Overview
 
-This project automates the travel planning process through a full-stack application. A user interacts with a React-based web interface, submitting a high-level request (e.g., "a 5-day trip from Antalya to Rome for 2 people with a €2000 budget, focusing on history"). The request is sent to a FastAPI backend, which orchestrates a team of specialized AI agents. The system connects to live APIs for flight and hotel data, uses real-time web search for activities, and queries for live events and concerts to produce a complete, logical, and budget-compliant travel plan, which is then rendered back to the user in the web UI.
+This project automates the travel planning process through a **cloud-native, microservices-based architecture**. The application is split into two fully containerized services: a **React frontend served by high-performance Nginx**, and a **FastAPI backend** that orchestrates a team of specialized AI agents.
 
-The core of this project is its robust, decoupled architecture and its ability to not only generate a plan but also to evaluate its own work and autonomously self-correct.
+A user interacts with the web interface to submit a high-level request (e.g., "a 5-day trip from Antalya to Rome for 2 people with a €2000 budget"). The request is processed by the backend container, which leverages **LangGraph** to manage stateful agents. These agents connect to live APIs for flight and hotel data, use real-time web search for activities, and autonomously self-correct to ensure the plan fits the user's constraints.
+
+The core of this project is its **robust, scalable design**, utilizing **Docker** for orchestration and ensuring compatibility with enterprise cloud platforms like **Red Hat OpenShift**.
 
 ---
 
 ## Features
 
-- **Full-Stack Architecture:** Decoupled frontend (React) and backend (FastAPI) for a scalable and professional application structure.
-- **Interactive Web Interface:** A clean, user-friendly UI built with React and Vite for submitting travel requests and viewing the final itinerary.
--   **Autonomous End-to-End Planning:** Generates a complete itinerary from a single natural language prompt.
+- **Microservices Architecture:** Fully containerized Frontend (React/Nginx) and Backend (FastAPI/Python) services, orchestrated via Docker Compose.
+- **Interactive Web Interface:** A user-friendly UI to submit travel requests and view rich, markdown-formatted itineraries with embedded interactive maps.
+- **Autonomous Multi-Agent System:** Uses LangGraph to manage a team of specialized agents (Planner, Researcher, Flight/Hotel/Event Specialists, Evaluator) that collaborate to achieve a complex goal.
 - **Live API Integration:** Connects to real-time APIs for flights and hotels, and uses live web search (Tavily) for activities, grounding all plans in current, real-world data.
--   **Multi-Agent Orchestration:** Uses LangGraph to manage a stateful team of specialized agents (Planner, Researcher, Evaluator, etc.) that collaborate and share state to achieve a complex goal.
--   **Parallel Task Execution:**  Efficiently searches for flights and hotels concurrently to reduce planning time.
--   **Intelligent Self-Correction & Multi-Path Refinement:** A built-in Evaluator agent checks the plan against user constraints (e.g., budget). If the plan fails, it strategically decides whether to refine the flight or the hotel and triggers a targeted revision loop. The system intelligently selects the next-best option from the available choices in each loop.
--   **Realistic Budgeting:** The system now incorporates a user-defined daily spending budget (for food, local transport, etc.) into its total cost calculation and evaluation, providing a much more realistic travel plan.
--   **Live Event Discovery:** A dedicated `Event Agent` connects to the Ticketmaster API to find and suggest real-time events, concerts, and shows happening in the destination city during the user's travel dates.
--  **Detailed & User-Friendly Itinerary:** Delivers the final plan as a rich Markdown report, featuring a budget summary, detailed flight tables (including times, flight numbers, aircraft types, and layovers), hotel information, and a day-by-day activity schedule.
--   **Interactive Map Visualization:** Automatically geocodes all planned activities and generates an interactive `folium` map, plotting the entire itinerary with numbered markers for each stop, which is displayed in the final Markdown.
+- **Intelligent Self-Correction:** A built-in Evaluator Agent critiques the generated plan against user constraints (budget, dates). If the plan fails (e.g., over budget), it triggers a targeted refinement loop to optimize flight or hotel choices.
+- **Parallel Execution:** Performs concurrent searches for flights, hotels, and events to minimize latency.
+- **Real-Time Data Integration:**
+
+  - **Flights & Hotels:** Live data via Booking.com API (RapidAPI).
+
+  - **Events:** Real-time concerts and events via Ticketmaster API.
+
+  - **Activities:** Web-scale search for local attractions via Tavily API.
+- **Cloud-Ready & Secure:** Designed with non-root user security policies (OpenShift compatible) and environment variable injection for secure credential management.
+- **Rich Deliverables:** Generates a comprehensive Markdown report and an interactive HTML map (folium), accessible both via the UI and local volume mapping.
 
 ---
 
-## System Architecture & Workflow
+## Backend Workflow & Agentic Logic
 
 The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node represents an agent or a specific function, and edges define the flow of information and control.
 
 
 ### Backend Workflow
 
-1.  **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
+While the system architecture is microservices-based, the internal AI logic follows a strictly orchestrated LangGraph workflow running inside the Backend Container:
+
+1. **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
+
 2. **Parallel Initial Data Gathering (Flight, Hotel & Event Agents):** The system simultaneously initiates three independent searches for flights, hotels, and live events, significantly speeding up the data collection phase.
-3. **Data Aggregator:** Acts as a synchronization barrier, waiting for all three parallel searches (flight, hotel, and event) to complete before proceeding.
-4. **Sequential Enrichment Pipeline:** To ensure data integrity and prevent race conditions, the following steps are performed in a strict sequence:
 
-    + **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest based on the user's interests.
+3. **Data Aggregator:** Acts as a synchronization barrier, waiting for all three parallel searches to complete before proceeding.
 
-    + **Geocoding Agent:** Takes the extracted activities and enriches them with precise latitude and longitude coordinates.
+4. **Sequential Enrichment Pipeline:** To ensure data integrity, the following steps are performed in sequence:
 
-    + **Activity Scheduling Agent:** Organizes the geocoded activities and events into a logical, day-by-day DailyPlan.
-5. **Evaluator Agent:** The quality control gate. This agent analyzes the complete drafted plan against user constraints and available alternatives, performing a strategic, value-based analysis to decide if the plan is optimal.
-6. **Efficient Self-Correction Loop:** Based on the Evaluator's decision, a conditional edge either approves the plan or triggers a targeted refinement loop directly back to the hotel_agent or flight_agent.
-7. **Map Generator Node:** Once the plan is approved, this node generates an interactive folium map from the final geocoded itinerary.
-9.  **Report Formatter:** Once the plan is approved, this final node creates the user-friendly .md and styled .html report files.
-8. **FastAPI Endpoint:** The endpoint returns the final report as a JSON response to the React client.
+   - **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest.
+
+   - **Geocoding Agent:** Enriches activities with precise latitude/longitude coordinates (robustly handled to prevent API timeouts).
+
+   -  **Activity Scheduling Agent:** Organizes activities into a logical `DailyPlan`.
+
+5. **Evaluator Agent:** The quality control gate. Performs a strategic value-based analysis of the drafted plan against user constraints.
+
+6. **Efficient Self-Correction Loop:** Based on the Evaluator, the graph either approves the plan or triggers a targeted refinement loop (routing back to **Flight** or **Hotel** agents) to optimize the budget.
+
+7. **Map Generator Node:** Generates an interactive folium map HTML snippet.
+
+8. **Report Formatter:** Creates the final `.md` and `.html` files. Note: These files are saved to a Docker Volume, making them accessible on the host machine immediately.
+
+9. **FastAPI Endpoint:** Streams the final status and JSON response back to the Frontend Container.
 
 
 ```mermaid
 graph TD
-    subgraph "User's Browser"
-        A[React Client UI]
+    subgraph "Host Machine (User Environment)"
+        Browser[User's Browser / React UI]
+        LocalDisk[("/server/output Folder")]
     end
 
-    subgraph "Backend Server"
-        B(FastAPI Endpoint: /plan-trip)
-        subgraph LangGraph Agentic Core
-            C(Planner Agent)
-            D{Flight Agent}
-            E{Hotel Agent}
-            J(Event Agent)
-            Agg(Data Aggregator)
-            F(Activity Extraction)
-            K(Geocoding Agent)
-            G(Activity Scheduling)
-            H{Evaluator Agent}
-            L(Map Generator)
-            I(Report Formatter)
+    subgraph "Docker Infrastructure (Microservices)"
+        
+        subgraph "Frontend Container"
+            Nginx[Nginx Web Server]
+            ReactApp[React App Assets]
+        end
+
+        subgraph "Backend Container"
+            API(FastAPI Endpoint)
+            
+            subgraph "LangGraph Agentic Core"
+                Planner(Planner Agent)
+                Flight{Flight Agent}
+                Hotel{Hotel Agent}
+                Event(Event Agent)
+                Agg(Data Aggregator)
+                
+                Extraction(Activity Extraction)
+                Geo(Geocoding Agent)
+                Schedule(Activity Scheduling)
+                
+                Evaluator{Evaluator Agent}
+                Map(Map Generator)
+                Report(Report Formatter)
+            end
+            
+            Volume[(Shared Docker Volume)]
         end
     end
 
-    A -- "POST Request with user_query" --> B
-    B --> C
-
-    C --> D
-    C --> E
-    C --> J
-    D --> Agg
-    E --> Agg
-    J --> Agg
-
-    Agg --> F
-    F --> K
-    K --> G
-    G --> H
-
-    H -->|Refine Hotel| E
-    H -->|Refine Flight| D
-    H -->|Plan OK / Max Retries| L
-
-    L --> I
-    I -- "Markdown Report" --> B
-    B -- "JSON Response with Report" --> A
+    %% Flow Connections
+    Browser -- "HTTP Request (Port 3000)" --> Nginx
+    Nginx -- "Serves App" --> Browser
+    Browser -- "API Request (Port 5001)" --> API
+    
+    API --> Planner
+    Planner --> Flight & Hotel & Event
+    Flight & Hotel & Event --> Agg
+    Agg --> Extraction --> Geo --> Schedule --> Evaluator
+    
+    Evaluator -->|Refine Hotel| Hotel
+    Evaluator -->|Refine Flight| Flight
+    Evaluator -->|Approved| Map
+    
+    Map --> Report
+    Report -- "Saves .md & .html" --> Volume
+    Volume -.->|Syncs to| LocalDisk
+    
+    Report --> API
+    API -- "JSON Stream" --> Browser
+    
  ```
 
 ---
@@ -106,17 +137,17 @@ graph TD
 
 Category | Tool/Library | Purpose |
 :---| :--- | :--- |
-`AI Core` | **Groq** | Ultra-fast Llama 3 inference for all agentic reasoning. |
+| `Infrastructure` | **Docker & Docker Compose** | Containerization and orchestration of microservices. |
+| |  **Nginx** | Serving the React frontend production build. |
+`AI& Orchestration`  | **Groq(Llama 3)** | High-speed inference engine for agent reasoning. |
 | | **LangChain** | Core framework for LLM interactions and tool definitions. |
 | | **LangGraph** |  Orchestrates the stateful, multi-agent graph with cycles and parallel execution. |
 | | **Pydantic** | Ensures data is structured and reliable throughout the entire workflow. |
 `Backend` | **FastAPI** | A high-performance Python framework for building the API server. |
 | | **Uvicorn** | The ASGI server that runs the FastAPI application.  |
 | | **Python 3.10+** | The core programming language for the backend and agent logic. |
-| | **Folium** | Generates interactive HTML maps to visualize the itinerary. 
-| | **Geopy** | Geocoding library to convert location names into coordinates.|
-`Frontend` | **React** |Building the interactive user interface. |
-| | **Vite** | A modern, fast frontend build tool and development server. |
+| | **Folium & Geopy** | Map generation and geocoding. |
+`Frontend` | **React & Vite** |Building the interactive user interface. |
 | | **Axios** | Making HTTP requests from the client to the backend API. |
 | | **React-Markdown** | Rendering the final Markdown report beautifully in the UI.|
 | `Data Source` | **RapidAPI** | Platform for accessing live Flight and Hotel APIs.|
@@ -128,120 +159,98 @@ Category | Tool/Library | Purpose |
 
 ##  Installation & Setup
 
-To get a local copy up and running, follow these steps.
+Since the project is fully dockerized, you do not need to install Python or Node.js locally. You only need **Docker Desktop.**
 
-**1. Clone the Repository**
+##### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/berkyalkn/AI-travel-agent
 cd AI-travel-agent
 ```
 
-**2. Set Up the Backend (server)**
+##### 2. Configure Environment Variables
+
+Create a `.env` file in the **server directory** of the project. This file will be injected into the containers at runtime.
 
 ```bash
-# Navigate to the server directory
 cd server
 
-# Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-#Create a .env file in the root folder with your API keys:
-#Open the .env file and enter your own API keys:
-GROQ_API_KEY="your_groq_api_key"
-TAVILY_API_KEY="your_tavily_api_key"
-RAPIDAPI_KEY="your_rapid_api_key"
-
+# Create .env file
+touch .env
 ```
 
-**3. Set Up the Frontend (client)**
+Add your API keys to the `.env` file:
 
 ```bash
-# From the root directory, navigate to the client directory
-cd ../client
-
-# Install JavaScript dependencies
-npm install
+GROQ_API_KEY=your_groq_key_here
+TAVILY_API_KEY=your_tavily_key_here
+RAPIDAPI_KEY=your_rapidapi_key_here
+TICKETMASTER_API_KEY=your_ticketmaster_key_here
 ```
 
----
+##### 3. Build and Run (Docker Compose)
 
-## How to Run
+Run the following command in the root directory. This will build both the Backend and Frontend images and start the services.
 
-You need to run the backend and frontend servers simultaneously in two separate terminal windows.
+```bash
+docker-compose up --build
+```
 
-1. Run the Backend Server:
-
-- Open a terminal and navigate to the server/ directory.
-
-- Activate the virtual environment (source venv/bin/activate).
-
-- ```bash
-  uvicorn main:app --reload
-  ```
-
-- The API server will be running at http://127.0.0.1:8000.
-
-
-2. Run the Frontend Application:
-
-- Open a second terminal and navigate to the client/ directory.
-
-- Run the following command:
-
-- ```bash
-  npm run dev
-  ```
-
-- This will automatically open the web application in your browser, usually at http://localhost:5173.
-
-
-Now you can use the web interface to plan your trip!
-
-> **Note on CORS:** The React frontend and FastAPI backend run on different ports (`localhost:5173` and `localhost:8000` respectively). The backend is configured with FastAPI's `CORSMiddleware` to explicitly allow requests from the frontend's origin during development. If you change the frontend port, you will need to update the `origins` list in `server/main.py`.
-
---- 
-
-## Example Usage
-
-A user simply types their request into the web interface. The more detail provided, the better the resulting plan will be.
-
-> **User's Request:**
-> "I want to plan trip to New York from Antalya for me and my two best friends between 25.09.205 and 28.09.2025 . We are interested in adventure, museums, and food, and our total budget is around 8,000 euros."
-
-#### What You Get
-
-After processing, the application renders a complete and detailed travel plan directly in the user interface, which includes:
-
--   **A Budget Summary:** A clear breakdown of the total estimated cost versus the user's budget.
--   **Flight & Hotel Details:** The selected flight and hotel, including pricing and ratings.
--   **A Day-by-Day Itinerary:** A logical schedule of activities and experiences tailored to the user's interests.
-
+Wait until you see `Uvicorn running on http://0.0.0.0:8000` in the logs.
 
 ---
 
-##  Key AI Concepts Demonstrated
+## Usage
 
-This project is a practical implementation of several advanced concepts in AI engineering:
--   **Structured Output:** Forcing all LLM outputs, from initial planning (TripRequest) to the final plan (Itinerary) and evaluation (EvaluationResult), into reliable Pydantic schemas to ensure data integrity and predictable workflows.
--   **Tool Binding & Live API Integration:** Enabling agents to use external functions to gather information from live, real-time APIs (for flights and hotels) and the unstructured web (for activities via Tavily Search).
--   **Parallelization:** Executing independent data-gathering tasks (flight and hotel searches) concurrently to significantly reduce total execution time.
--   **Advanced Routing & State-Aware Logic:** The graph uses conditional edges not just to create a self-correcting loop, but to create an **efficient, state-aware refinement cycle**. By checking the `refinement_count`, the graph dynamically alters its path, bypassing expensive data gathering steps during refinement to significantly improve performance and reduce costs.
--   **Stateful Multi-Agent Orchestration:** Using LangGraph to manage a complex, multi-step process where multiple specialized agents collaborate and share information through a persistent state (TripState).
--   **Evaluation & Reflection:** Creating a dedicated Evaluator agent that critiques the system's own output against user constraints and available alternatives, enabling true autonomous decision-making and refinement.
--   **Complex Intent Parsing & Slot Filling:** The `Planner Agent` demonstrates robust NLU capabilities. It not only parses primary constraints (destination, budget) but also extracts secondary, nuanced details like the `daily_spending_budget` from a single, unstructured sentence.
--   **AI-driven Reflection (Self-Critique):** The `Evaluator Agent` is a practical implementation of AI reflection. It critiques the generated plan against a set of rules (the user's constraints), mirroring advanced concepts like Constitutional AI where a system uses principles to judge and refine its own outputs, leading to more reliable and aligned results.
+**1. Open the Application:** Navigate to http://localhost:3000 in your browser.
+
+**2. Submit a request:**
+ - Example: "I want to plan trip to New York from Antalya for me and my two best friends between 25.09.2025 and 28.09.2025 . We are interested in adventure, museums, and food, and our total budget is around 8,000 euros."
+
+**3. View the Results:**
+- The system will stream the progress of each agent.
+- Once complete, you will see a detailed Markdown itinerary and an Interactive Map.
+
+**4. Access Local Reports:** The generated reports (`trip_itinerary.md` and `trip_itinerary.html`) are automatically synced to your local machine via Docker Volumes. You can find them in:
+
+```bash
+./server/output/
+```
+---
+
+## Key Engineering Concepts
+
+This project serves as a showcase of advanced AI Engineering and Cloud Architecture principles:
+
+#### AI & Agentic Patterns
+
+- **Stateful Multi-Agent Orchestration:** Uses LangGraph to manage a complex, cyclic workflow where specialized agents (Planner, Researcher, Evaluator) collaborate through a persistent state (TripState), mimicking a human team structure.
+
+- **Structured Output & Validation:** Enforces strict Pydantic schemas on all LLM outputs. This prevents hallucinations in data structures and ensures the frontend receives reliable, parseable JSON for rendering.
+
+- **Intelligent Self-Correction (Reflection):** Implements a feedback loop inspired by Constitutional AI. The Evaluator Agent critiques the plan against constraints (budget, location). If rejected, it dynamically routes the workflow back to specific agents for targeted refinement, rather than restarting the whole process.
+
+- **Tool Use & Live Grounding:** Demonstrates advanced tool binding where LLMs autonomously query real-time APIs (Booking.com, Ticketmaster, Tavily) to ground their reasoning in current, real-world data.
+
+
+#### Cloud & System Architecture
+
+- **Microservices Pattern:** Decouples the application into distinct Frontend (React/Nginx) and Backend (FastAPI) containers, communicating via a bridge network. This ensures independent scaling and separation of concerns.
+
+- **Containerization & Security:** Fully dockerized environment following OpenShift security standards (non-root users, arbitrary UID support).
+
+- **Resilient Error Handling:** Implements robust retry mechanisms (exponential backoff) and timeout handling for external APIs (e.g., Geocoding), ensuring system stability even during network latency or API outages.
+
+- **Parallel Execution:** Optimizes performance by executing independent blocking I/O operations (Flight, Hotel, and Event searches) concurrently.
 
 ### What You Get
 
-After processing, the application renders a complete and detailed travel plan directly in the user interface, which includes:
+Upon successful execution, the system generates comprehensive outputs accessible via both the Web UI and the local file system:
 
--   **A Budget Summary:** A clear breakdown of the total estimated cost versus the user's budget, including a cost-per-person calculation.
--   **Detailed Flight Information:** A table-formatted view of the selected flights, including departure/arrival times, airports, flight numbers, aircraft types, and layover details.
--   **Curated Hotel Selection:** The chosen hotel with its rating and total price for the stay.
--  **Live Event Recommendations:** A selected list of concerts, shows, and other live events happening in the city during the travel dates, complete with links for more details.
--   **A Day-by-Day Itinerary:** A logical schedule of activities and experiences tailored to the user's interests, with actual dates for each day.
--   **An Interactive Itinerary Map:** A final HTML map file is generated, plotting all scheduled activities with numbered markers, providing a complete visual guide for the trip.
+- **Interactive Web Dashboard:** A real-time UI that streams the agent's thought process and renders the final plan.
+
+- **Smart Budget Breakdown:** A comparative analysis of the estimated cost vs. user budget, including per-person calculations.
+
+- **Rich Markdown Report (trip_itinerary.md):** A detailed, readable document containing flight tables, hotel ratings, and day-by-day schedules.
+
+- **Interactive Map (trip_itinerary.html):** A generated HTML file with an embedded Leaflet/Folium map, plotting every activity with numbered markers for spatial visualization.
