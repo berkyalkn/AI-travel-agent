@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: travel-backend
+  labels:
+    app: travel-agent
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: travel-agent
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: travel-agent
+        tier: backend
+    spec:
+      containers:
+        - name: travel-backend
+          image: berkayalkn/travel-agent-backend:v2
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: backend-secrets
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:        
+              memory: "256Mi"
+              cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: travel-backend-svc
+spec:
+  selector:
+    app: travel-agent
+    tier: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: travel-backend-route
+spec:
+  to:
+    kind: Service
+    name: travel-backend-svc
+  port:
+    targetPort: 8000
