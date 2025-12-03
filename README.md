@@ -137,7 +137,8 @@ graph TD
 
 Category | Tool/Library | Purpose |
 :---| :--- | :--- |
-| `Infrastructure` | **Docker & Docker Compose** | Containerization and orchestration of microservices. |
+| `Infrastructure` | **Docker & Docker Compose** | Local containerization and multi-container orchestration. |
+| | **Red Hat OpenShift (CRC)** | Enterprise Kubernetes cluster for production-grade deployment. |
 | |  **Nginx** | Serving the React frontend production build. |
 `AI& Orchestration`  | **Groq(Llama 3)** | High-speed inference engine for agent reasoning. |
 | | **LangChain** | Core framework for LLM interactions and tool definitions. |
@@ -199,6 +200,94 @@ docker-compose up --build
 Wait until you see `Uvicorn running on http://0.0.0.0:8000` in the logs.
 
 ---
+## Cloud Deployment (Red Hat OpenShift)
+
+This project is designed to be Cloud-Agnostic but includes specific manifests for Red Hat OpenShift (Kubernetes).
+
+### Architecture on OpenShift
+
+- **Security:** Containers run as non-root users (UUID 100xxx) to comply with OpenShift's restricted SCC.
+
+- **Networking:** The Frontend communicates with the Backend via an external Route (HTTP), solving CORS issues through middleware configuration.
+
+- **Config Management:** API Keys are injected via Kubernetes Secrets, not hardcoded.
+
+### Deployment Guide
+
+#### Prerequisites:
+
+- `oc` CLI installed and logged in.
+
+- `Docker Hub` account (for pulling images)
+
+
+##### 1.Create Secrets
+
+Securely inject your API keys into the cluster.
+
+```bash
+oc create secret generic backend-secrets --from-env-file=server/.env
+```
+
+##### 2. Build & Push Backend Image
+
+Build the backend image and push it to your Docker Hub repository.
+
+```bash
+cd server
+docker build -t youruser/travel-agent-backend:v1 .
+docker push youruser/travel-agent-backend:v1
+```
+
+
+##### 3.Deploy Backend
+
+**Important:** Before applying, open `openshift/backend.yaml` and replace the `image` field with your own image name (e.g., `youruser/travel-agent-backend:v1`).
+
+```bash
+# Edit the file first!
+# Then apply:
+oc apply -f openshift/backend.yaml
+```
+
+Wait for the pod to be ready:
+
+```bash
+oc get pods -w
+```
+
+##### 4. Build & Deploy Frontend
+
+The Frontend needs the Backend's live URL to function correctly.
+
+- Get the Backend URL:
+
+```bash
+oc get route travel-backend-route
+# Copy the URL (e.g., http://travel-backend-route....crc.testing)
+```
+
+- Re-Build Frontend Image:
+
+```bash
+cd client
+docker build --build-arg VITE_API_URL=http://YOUR_BACKEND_URL_HERE -t youruser/travel-frontend:v1 .
+docker push youruser/travel-frontend:v1
+```
+
+- Deploy Frontend:
+
+*Important:* Open `openshift/frontend.yaml` and update the `image` field to `youruser/travel-frontend:v1`.
+
+```bash
+oc apply -f openshift/frontend.yaml
+```
+
+Your AI Travel Agent is now live on the OpenShift Route URL!
+
+
+
+---
 
 ## Usage
 
@@ -242,6 +331,8 @@ This project serves as a showcase of advanced AI Engineering and Cloud Architect
 - **Resilient Error Handling:** Implements robust retry mechanisms (exponential backoff) and timeout handling for external APIs (e.g., Geocoding), ensuring system stability even during network latency or API outages.
 
 - **Parallel Execution:** Optimizes performance by executing independent blocking I/O operations (Flight, Hotel, and Event searches) concurrently.
+
+- **Cloud-Native Deployment Strategy:** The application is architected to run on Kubernetes/OpenShift. It respects strict security contexts (Arbitrary UID), uses Secrets for sensitive key management, and implements Service Discovery via OpenShift Routes.
 
 ### What You Get
 
