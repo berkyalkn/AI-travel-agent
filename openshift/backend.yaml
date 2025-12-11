@@ -22,6 +22,18 @@ spec:
           image: berkayalkn/travel-agent-backend:v2
           ports:
             - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
           envFrom:
             - secretRef:
                 name: backend-secrets
