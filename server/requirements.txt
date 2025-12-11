@@ -8,6 +8,7 @@ langchain-groq
 langchain-core
 langgraph
 langchain-tavily
+langchain-google-genai
 geopy
 folium
 tenacity
