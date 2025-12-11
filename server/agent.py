@@ -976,94 +976,92 @@ def activity_scheduling_agent(state: TripState) -> dict:
 
 
 def evaluator_agent(state: TripState) -> dict:
-    """
-    Evaluates the plan with a more strategic, value-based reasoning process.
-    It considers the trade-offs of refining flight vs. hotel.
-    """
-    print("--- Running Smart Evaluator Agent ---")
+    print("--- Running Smart Evaluator Agent (High IQ Mode) ---")
     trip_plan = state['trip_plan']
     selected_flight = state['selected_flight']
     selected_hotel = state['selected_hotel']
     flight_options = state['flight_options']
     hotel_options = state['hotel_options']
-
-    if not all([trip_plan, selected_flight, selected_hotel]):
-        return { "evaluation_result": EvaluationResult(action="APPROVE", feedback="Could not evaluate due to missing data.", total_cost=0) }
-
-    flight_and_hotel_cost = selected_flight.price + selected_hotel.total_price 
-
-    daily_spending = trip_plan.daily_spending_budget if trip_plan.daily_spending_budget else 0
-
-    total_daily_spending = daily_spending * trip_plan.person * trip_plan.days
-
-    total_cost = flight_and_hotel_cost + total_daily_spending
-    
-    budget = trip_plan.budget
-
     refinement_count = state.get('refinement_count', 0)
     
-    next_hotel_details = "No other hotel options available."
-    potential_hotel_saving = 0
+    flight_and_hotel_cost = selected_flight.price + selected_hotel.total_price 
+    daily_spending = trip_plan.daily_spending_budget if trip_plan.daily_spending_budget else 0
+    total_daily_spending = daily_spending * trip_plan.person * trip_plan.days
+    total_cost = flight_and_hotel_cost + total_daily_spending
+    budget = trip_plan.budget
+
+
+    next_hotel_info = "None"
     if len(hotel_options) > refinement_count + 1:
-        next_hotel = hotel_options[refinement_count + 1]
-        potential_hotel_saving = selected_hotel.total_price - next_hotel.total_price
-        next_hotel_details = next_hotel.model_dump_json(indent=2)
+        h = hotel_options[refinement_count + 1]
+        diff = selected_hotel.total_price - h.total_price
+        next_hotel_info = f"""
+        Name: {h.hotel_name}
+        Price: €{h.total_price} (Saves €{diff:.2f})
+        Rating: {h.rating} (Current is {selected_hotel.rating})
+        """
 
-    next_flight_details = "No other flight options available."
-    potential_flight_saving = 0
+    next_flight_info = "None"
     if len(flight_options) > refinement_count + 1:
-        next_flight = flight_options[refinement_count + 1]
-        potential_flight_saving = selected_flight.price - next_flight.price
-        next_flight_details = next_flight.model_dump_json(indent=2)
-    
+        f = flight_options[refinement_count + 1]
+        diff = selected_flight.price - f.price
+        duration_diff = f.departure_leg.duration_minutes - selected_flight.departure_leg.duration_minutes
+        duration_msg = f"{duration_diff} mins longer" if duration_diff > 0 else f"{abs(duration_diff)} mins shorter"
+        
+        next_flight_info = f"""
+        Airline: {f.departure_leg.airline}
+        Price: €{f.price} (Saves €{diff:.2f})
+        Duration Change: {duration_msg}
+        Stops: {'Direct' if not f.departure_leg.is_layover else 'Has Layover'}
+        """
+
     evaluator_llm = llm.bind_tools([EvaluationResult])
-    
+
     prompt = f"""
-    You are a strategic travel consultant. Your goal is to find the OPTIMAL plan for the user, balancing budget, quality, and convenience. Analyze the provided data and choose the most logical action.
-
-    **Data Analysis:**
-    - User's Budget: €{budget}
-    - Current Total Cost: €{total_cost}
-    - Is plan over budget? {'Yes' if total_cost > budget else 'No'}
-
-    **Current Selections:**
-    - Selected Flight: {selected_flight.model_dump_json(indent=2)}
-    - Selected Hotel: {selected_hotel.model_dump_json(indent=2)}
-
-    **Potential Refinement Options:**
-    - Next Cheaper Hotel Option: {next_hotel_details}
-      (This change would save approximately €{potential_hotel_saving:.2f})
-      
-    - Next Cheaper Flight Option: {next_flight_details}
-      (This change would save approximately €{potential_flight_saving:.2f})
-
-    **Decision Rules:**
-    1.  If the plan is within budget, 'APPROVE' it.
-    2.  **CRITICAL RULE: If the plan is OVER budget, you MUST choose a 'REFINE' action.** Your primary goal is to get the cost under budget.
-        -   Compare the potential savings from refining the hotel vs. the flight.
-        -   Choose the refinement (`REFINE_HOTEL` or `REFINE_FLIGHT`) that provides the **largest monetary saving**. A drop in hotel rating is acceptable if it brings the plan back into budget.
-    3.  If the plan is over budget but no cheaper options are available (e.g., potential savings are zero or negative), you can 'APPROVE' it, but clearly state in your feedback that no better options could be found within the budget.
-
-    Based on these strict rules, call the `EvaluationResult` function with your decision.
-    """
+    You are an expert Travel Consultant. Your goal is to maximize the user's experience while trying to respect the budget.
     
+    **Current Status:**
+    - Budget: €{budget}
+    - Total Cost: €{total_cost:.2f}
+    - Status: {'Over Budget' if total_cost > budget else 'Within Budget'}
+
+    **Current Selection Quality:**
+    - Flight: {selected_flight.departure_leg.airline}, Duration: {selected_flight.departure_leg.duration_minutes} mins, Price: €{selected_flight.price}
+    - Hotel: {selected_hotel.hotel_name}, Rating: {selected_hotel.rating}/10, Price: €{selected_hotel.total_price}
+
+    **Alternative Options for Refinement:**
+    - Option A (Cheaper Hotel): {next_hotel_info}
+    - Option B (Cheaper Flight): {next_flight_info}
+
+    **Strategic Rules (Think carefully):**
+    1. If **Within Budget**: APPROVE immediately.
+    2. If **Over Budget**: You must refine, BUT choose the "Lesser of Two Evils":
+       - **Don't just pick the biggest saving.** Look at the Quality Trade-off.
+       - If the Cheaper Flight adds 5+ hours of travel time for only €10 saving, REJECT IT.
+       - If the Cheaper Hotel drops the rating from 9.0 to 6.0, try to avoid it unless necessary.
+       - If both options are terrible (huge quality drop), pick the one that saves the most money to fix the budget.
+       - If one option saves a lot of money with minimal quality loss (e.g., same flight duration, similar hotel rating), PICK THAT ONE.
+
+    3. **Edge Case:** If the plan is slightly over budget (e.g., <5%) but the cheaper alternatives are terrible (bad ratings, long flights), you can APPROVE it. But explain why in the feedback (e.g., "Slightly over budget, but alternatives compromise quality too much").
+
+    Make a decision: APPROVE, REFINE_FLIGHT, or REFINE_HOTEL.
+    """
+
     ai_message = evaluator_llm.invoke(prompt)
     
     if not ai_message.tool_calls:
-        raise ValueError("LLM failed to produce a valid tool call for the EvaluationResult.")
+        return {"evaluation_result": EvaluationResult(action="APPROVE", feedback="Auto-approved due to error.", total_cost=total_cost), "refinement_count": refinement_count + 1}
         
     tool_call = ai_message.tool_calls[0]
     result = EvaluationResult(**tool_call['args'])
-   
     result.total_cost = total_cost
-    print(f"-> Evaluator's strategic decision: {result.action}. Feedback: {result.feedback}")
     
-    new_refinement_count = refinement_count + 1
-    return {"evaluation_result": result, "refinement_count": new_refinement_count}
+    print(f"-> Smart Decision: {result.action}. Reason: {result.feedback}")
+    return {"evaluation_result": result, "refinement_count": refinement_count + 1}
 
 
 
-MAX_REFINEMENTS = 3
+MAX_REFINEMENTS = 2
 
 def should_refine_or_end(state: TripState):
     """
