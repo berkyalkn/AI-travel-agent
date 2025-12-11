@@ -14,6 +14,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph, START, END
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
@@ -33,6 +34,12 @@ if not all([groq_api_key, tavily_api_key, rapidapi_key, ticketmaster_api_key]):
 
 
 llm = ChatGroq(model="llama-3.3-70b-versatile", api_key = groq_api_key, max_retries=3)
+
+llm_gemini = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.1,
+        google_api_key=os.getenv("GEMINI_API_KEY")
+    )
 
 
 class TripRequest(BaseModel) :
@@ -1015,7 +1022,7 @@ def evaluator_agent(state: TripState) -> dict:
         Stops: {'Direct' if not f.departure_leg.is_layover else 'Has Layover'}
         """
 
-    evaluator_llm = llm.bind_tools([EvaluationResult])
+    evaluator_llm = llm_gemini.bind_tools([EvaluationResult])
 
     prompt = f"""
     You are an expert Travel Consultant. Your goal is to maximize the user's experience while trying to respect the budget.
@@ -1047,17 +1054,23 @@ def evaluator_agent(state: TripState) -> dict:
     Make a decision: APPROVE, REFINE_FLIGHT, or REFINE_HOTEL.
     """
 
-    ai_message = evaluator_llm.invoke(prompt)
-    
-    if not ai_message.tool_calls:
-        return {"evaluation_result": EvaluationResult(action="APPROVE", feedback="Auto-approved due to error.", total_cost=total_cost), "refinement_count": refinement_count + 1}
+    try:
+        ai_message = evaluator_llm.invoke(prompt)
         
-    tool_call = ai_message.tool_calls[0]
-    result = EvaluationResult(**tool_call['args'])
-    result.total_cost = total_cost
-    
-    print(f"-> Smart Decision: {result.action}. Reason: {result.feedback}")
-    return {"evaluation_result": result, "refinement_count": refinement_count + 1}
+        if not ai_message.tool_calls:
+            print(f"Gemini Response (No Tool): {ai_message.content}")
+            return {"evaluation_result": EvaluationResult(action="APPROVE", feedback="Auto-approved (Gemini didn't invoke tool)", total_cost=total_cost), "refinement_count": refinement_count + 1}
+            
+        tool_call = ai_message.tool_calls[0]
+        result = EvaluationResult(**tool_call['args'])
+        result.total_cost = total_cost
+        
+        print(f"-> Gemini Decision: {result.action}. Reason: {result.feedback}")
+        return {"evaluation_result": result, "refinement_count": refinement_count + 1}
+
+    except Exception as e:
+        print(f"Gemini Error: {e}")
+        return {"evaluation_result": EvaluationResult(action="APPROVE", feedback="Approved due to evaluator error.", total_cost=total_cost), "refinement_count": refinement_count + 1}
 
 
 
