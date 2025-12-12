@@ -335,9 +335,10 @@ def flight_search_tool(origin_iata_list: List[str], destination_iata_list: List[
         print("-> No valid flights parsed from the response.")
         return []
 
-    all_flight_options.sort(key=lambda x: x.price)
-    print(f"-> Found and successfully parsed {len(all_flight_options)} valid flights. Returning the top 5 cheapest.")
-    return all_flight_options[:5]
+    all_flight_options.sort(key=lambda x: x.price + (x.total_duration_minutes * 0.5))
+
+    print(f"-> Found {len(all_flight_options)} flights. Returning top 10 'Best Value' options.")
+    return all_flight_options[:10]
 
 
 @tool
@@ -649,21 +650,20 @@ def flight_agent(state: TripState) -> dict:
         options_text += f"Option {i}: Airline: {airline}, Price: €{opt.price:.2f}, Total Duration: {total_duration} minutes.\n"
 
     prompt = f"""
-    You are an expert travel agent. Your task is to select the best flight from the list below, balancing cost, convenience, and total travel time.
+    You are an expert flight travel agent.
+    Your goal is to select the BEST flight option for the user.
+    
+    CRITERIA:
+    1. Budget: Total flight cost should be reasonable within the trip budget of {state['trip_plan'].budget}.
+    2. Convenience: STRONGLY prefer direct flights or short layovers. Avoid flights longer than 15 hours unless they are significantly (50%+) cheaper.
+    3. Timing: Ensure arrival/departure times work for a {state['trip_plan'].days}-day trip.
 
-    **CRITICAL INSTRUCTIONS FOR LAYOVERS:**
-    -   **Total travel time is paramount.** A cheap flight with an extremely long layover (e.g., more than 5 hours) is a BAD choice.
-    -   Analyze the `layover_duration_minutes` for both departure and return legs.
-    -   Strongly penalize any option with an excessive layover. A direct flight or one with a short layover (under 4 hours) is much more valuable than saving a small amount of money.
+    Flight Options:
+    {flight_options_str}
 
-    **USER PREFERENCES:**
-    -   Budget: €{trip_plan.budget}
-
-    **FLIGHT OPTIONS:**
-    {options_text}
-
-    Analyze the options considering price, total flight duration, AND total layover time. Select the option that provides the most convenient and time-efficient journey for the user. Call the `FlightSelection` function with your decision.
+    Select the best option.
     """
+
 
     ai_message = selection_llm.invoke(prompt)
 
