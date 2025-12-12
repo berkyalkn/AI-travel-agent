@@ -1,135 +1,101 @@
 
-# Autonomous AI Travel Agent with Self-Correction
+# Autonomous AI Travel Agent (Microservices Architecture)
 
-An AI travel agent built with a Microservices Architecture using React (Nginx) for the frontend and FastAPI for the backend. Orchestrated by LangGraph, this system features a cyclical multi-agent workflow powered by Groq (Llama 3) and Tavily.
+An **AI Travel Agent** built with a **Distributed Microservices Architecture**. The system leverages **LangGraph** for stateful multi-agent orchestration, **FastAPI** for high-performance service communication, and **React** for the frontend.
 
-It demonstrates a stateful, self-correcting AI system that can plan, research, evaluate, and generate detailed travel itineraries with interactive maps based on a single natural language request. The entire application is containerized with Docker.
+It demonstrates a scalable, self-correcting AI system capable of planning, researching, evaluating, and generating detailed travel itineraries by orchestrating a fleet of specialized microservices (Flight, Hotel, Activity, Event, Geocoding).
 
 ---
 
 ## Overview
 
-This project automates the travel planning process through a **cloud-native, microservices-based architecture**. The application is split into two fully containerized services: a **React frontend served by high-performance Nginx**, and a **FastAPI backend** that orchestrates a team of specialized AI agents.
+This project represents a **cloud-native AI Travel Agent** re-architected from a monolithic application into a **distributed microservices system**.
 
-A user interacts with the web interface to submit a high-level request (e.g., "a 5-day trip from Antalya to Rome for 2 people with a €2000 budget"). The request is processed by the backend container, which leverages **LangGraph** to manage stateful agents. These agents connect to live APIs for flight and hotel data, use real-time web search for activities, and autonomously self-correct to ensure the plan fits the user's constraints.
+The application is orchestrated via **Docker** and creates a seamless ecosystem of 7 **independent containers**:
 
-The core of this project is its **robust, scalable design**, utilizing **Docker** for orchestration and ensuring compatibility with enterprise cloud platforms like **Red Hat OpenShift**.
+1- **Frontend:** A high-performance React UI served by Nginx.
+
+2- **Orchestrator (Backend):** The central nervous system powered by **LangGraph**, responsible for managing state, LLM reasoning (Groq/Llama 3), and plan evaluation.
+
+3- **5 Specialized Microservices:** Dedicated FastAPI containers for **Flight Search, Hotel Search, Event Discovery, Activity Extraction, and Geocoding**.
+
+A user interacts with the web interface to submit a natural language request. The **Orchestrator** parses this intent and triggers parallel requests to the microservices, drastically reducing latency. It then aggregates real-time data from **Booking.com, Ticketmaster, and Tavily**, applies intelligent self-correction via an **Evaluator Agent** (Gemini), and produces a fully detailed itinerary.
+
+Designed for **scalability and fault tolerance**, this project demonstrates advanced engineering principles suitable for enterprise cloud platforms like **Red Hat OpenShift**.
 
 ---
 
 ## Features
 
-- **Microservices Architecture:** Fully containerized Frontend (React/Nginx) and Backend (FastAPI/Python) services, orchestrated via Docker Compose.
-- **Interactive Web Interface:** A user-friendly UI to submit travel requests and view rich, markdown-formatted itineraries with embedded interactive maps.
+- **Distributed Microservices Architecture:** The backend is decoupled into 6 distinct containers:
+
+  - **Orchestrator:** Manages state, LangGraph workflow, and LLM reasoning.
+
+  - **Flight Service:** Dedicated microservice for parallel flight search and filtering (Booking.com API).
+
+  - **Hotel Service:** Dedicated microservice for accommodation search (Booking.com API).
+
+  - **Event Service:** Dedicated microservice for real-time event discovery (Ticketmaster API).
+
+  - **Activity Service:** Web scraper microservice for local attractions (Tavily API).
+
+  - **Geocoding Service:** Utility microservice for coordinate mapping with Rate Limiting (OpenStreetMap).
+
+- **Automated OpenShift Deployment:** Includes a custom Bash script (`deploy_all.sh`) for one-click build and deployment of all 7 containers to Red Hat OpenShift (CRC).
+
 - **Autonomous Multi-Agent System:** Uses LangGraph to manage a team of specialized agents (Planner, Researcher, Flight/Hotel/Event Specialists, Evaluator) that collaborate to achieve a complex goal.
-- **Live API Integration:** Connects to real-time APIs for flights and hotels, and uses live web search (Tavily) for activities, grounding all plans in current, real-world data.
-- **Intelligent Self-Correction:** A built-in Evaluator Agent critiques the generated plan against user constraints (budget, dates). If the plan fails (e.g., over budget), it triggers a targeted refinement loop to optimize flight or hotel choices.
-- **Parallel Execution:** Performs concurrent searches for flights, hotels, and events to minimize latency.
-- **Real-Time Data Integration:**
 
-  - **Flights & Hotels:** Live data via Booking.com API (RapidAPI).
+- **Parallel Execution:** The Orchestrator triggers Flight, Hotel, and Event services simultaneously, significantly reducing total request latency.
 
-  - **Events:** Real-time concerts and events via Ticketmaster API.
+- **Resilient & Fault Tolerant:** Designed to handle service timeouts gracefully. If a non-critical service (e.g., Geocoding) fails, the Orchestrator adapts and continues the pipeline.
 
-  - **Activities:** Web-scale search for local attractions via Tavily API.
-- **Cloud-Ready & Secure:** Designed with non-root user security policies (OpenShift compatible) and environment variable injection for secure credential management.
-- **Rich Deliverables:** Generates a comprehensive Markdown report and an interactive HTML map (folium), accessible both via the UI and local volume mapping.
+- **Intelligent Self-Correction:** An Evaluator Agent (Gemini) critiques the generated plan against budget/constraints and triggers targeted refinement loops if necessary.
+
 
 ---
 
-## Backend Workflow & Agentic Logic
+## System Architecture
 
-The system is modeled as a stateful graph (`StateGraph`) in LangGraph. Each node represents an agent or a specific function, and edges define the flow of information and control.
+The application is containerized using **Docker** and orchestrated via **Docker Compose** (for local dev) or **Kubernetes/OpenShift** (for production).
 
-
-### Backend Workflow
-
-While the system architecture is microservices-based, the internal AI logic follows a strictly orchestrated LangGraph workflow running inside the Backend Container:
-
-1. **Planner Agent:** Parses the user's natural language request into a structured `TripRequest` object containing all key constraints (destination, dates, budget, etc.).
-
-2. **Parallel Initial Data Gathering (Flight, Hotel & Event Agents):** The system simultaneously initiates three independent searches for flights, hotels, and live events, significantly speeding up the data collection phase.
-
-3. **Data Aggregator:** Acts as a synchronization barrier, waiting for all three parallel searches to complete before proceeding.
-
-4. **Sequential Enrichment Pipeline:** To ensure data integrity, the following steps are performed in sequence:
-
-   - **Activity Extraction Agent:** Scans the web with Tavily to find relevant points of interest.
-
-   - **Geocoding Agent:** Enriches activities with precise latitude/longitude coordinates (robustly handled to prevent API timeouts).
-
-   -  **Activity Scheduling Agent:** Organizes activities into a logical `DailyPlan`.
-
-5. **Evaluator Agent:** The quality control gate. Performs a strategic value-based analysis of the drafted plan against user constraints.
-
-6. **Efficient Self-Correction Loop:** Based on the Evaluator, the graph either approves the plan or triggers a targeted refinement loop (routing back to **Flight** or **Hotel** agents) to optimize the budget.
-
-7. **Map Generator Node:** Generates an interactive folium map HTML snippet.
-
-8. **Report Formatter:** Creates the final `.md` and `.html` files. Note: These files are saved to a Docker Volume, making them accessible on the host machine immediately.
-
-9. **FastAPI Endpoint:** Streams the final status and JSON response back to the Frontend Container.
-
+### Microservices Communication Flow
 
 ```mermaid
 graph TD
-    subgraph "Host Machine (User Environment)"
-        Browser[User's Browser / React UI]
-        LocalDisk[("/server/output Folder")]
+    User((User)) -->|HTTP/React| Frontend[Frontend Container<br>React + Nginx]
+    Frontend -->|JSON Stream| Orch[Orchestrator Container<br>FastAPI + LangGraph]
+    
+    subgraph "Internal Service Network"
+        Orch -->|HTTP/REST| Flight[Flight Service]
+        Orch -->|HTTP/REST| Hotel[Hotel Service]
+        Orch -->|HTTP/REST| Event[Event Service]
+        Orch -->|HTTP/REST| Activity[Activity Service]
+        Orch -->|HTTP/REST| Geo[Geocoding Service]
     end
-
-    subgraph "Docker Infrastructure (Microservices)"
-        
-        subgraph "Frontend Container"
-            Nginx[Nginx Web Server]
-            ReactApp[React App Assets]
-        end
-
-        subgraph "Backend Container"
-            API(FastAPI Endpoint)
-            
-            subgraph "LangGraph Agentic Core"
-                Planner(Planner Agent)
-                Flight{Flight Agent}
-                Hotel{Hotel Agent}
-                Event(Event Agent)
-                Agg(Data Aggregator)
-                
-                Extraction(Activity Extraction)
-                Geo(Geocoding Agent)
-                Schedule(Activity Scheduling)
-                
-                Evaluator{Evaluator Agent}
-                Map(Map Generator)
-                Report(Report Formatter)
-            end
-            
-            Volume[(Shared Docker Volume)]
-        end
+    
+    subgraph "External APIs"
+        Flight --> BookingAPI(Booking.com)
+        Hotel --> BookingAPI
+        Event --> TM(Ticketmaster)
+        Activity --> Tavily(Tavily Search)
+        Geo --> OSM(OpenStreetMap)
+        Orch --> LLM(Groq Llama 3 & Gemini)
     end
-
-    %% Flow Connections
-    Browser -- "HTTP Request (Port 3000)" --> Nginx
-    Nginx -- "Serves App" --> Browser
-    Browser -- "API Request (Port 5001)" --> API
-    
-    API --> Planner
-    Planner --> Flight & Hotel & Event
-    Flight & Hotel & Event --> Agg
-    Agg --> Extraction --> Geo --> Schedule --> Evaluator
-    
-    Evaluator -->|Refine Hotel| Hotel
-    Evaluator -->|Refine Flight| Flight
-    Evaluator -->|Approved| Map
-    
-    Map --> Report
-    Report -- "Saves .md & .html" --> Volume
-    Volume -.->|Syncs to| LocalDisk
-    
-    Report --> API
-    API -- "JSON Stream" --> Browser
-    
  ```
+
+### The Agentic Workflow (Inside Orchestrator)
+
+- **Planner Node:** Structured parsing of user intent.
+
+- **Parallel Execution:** Calls Flight, Hotel, and Event microservices concurrently.
+
+- **Aggregator:** Synchronizes results.
+
+- **Activity & Geocoding:** Calls Activity Service for POIs and Geocoding Service for coordinates.
+
+- **Scheduler & Evaluator:** Organizes the timeline and uses Gemini to audit the budget.
+
+- **Refinement Loop:** If rejected, routes back to specific services for better options.
 
 ---
 
@@ -139,10 +105,11 @@ Category | Tool/Library | Purpose |
 :---| :--- | :--- |
 | `Infrastructure` | **Docker & Docker Compose** | Local containerization and multi-container orchestration. |
 | | **Red Hat OpenShift (CRC)** | Enterprise Kubernetes cluster for production-grade deployment. |
-| |  **Nginx** | Serving the React frontend production build. |
-`AI& Orchestration`  | **Groq(Llama 3)** | High-speed inference engine for agent reasoning. |
+| | **Nginx** | Serving the React frontend production build. |
+`AI& Orchestration`  | **Groq(Llama 3)** | High-speed generation for planning and scheduling. |
+| | **Google Gemini** | "High IQ" evaluator for plan auditing. |
 | | **LangChain** | Core framework for LLM interactions and tool definitions. |
-| | **LangGraph** |  Orchestrates the stateful, multi-agent graph with cycles and parallel execution. |
+| | **LangGraph** | Orchestrates the stateful, multi-agent graph with cycles and parallel execution. |
 | | **Pydantic** | Ensures data is structured and reliable throughout the entire workflow. |
 `Backend` | **FastAPI** | A high-performance Python framework for building the API server. |
 | | **Uvicorn** | The ASGI server that runs the FastAPI application.  |
@@ -158,153 +125,110 @@ Category | Tool/Library | Purpose |
 
 ---
 
-##  Installation & Setup
+##  Installation & Local Setup
 
-Since the project is fully dockerized, you do not need to install Python or Node.js locally. You only need **Docker Desktop.**
+#### Prerequisites
 
-##### 1. Clone the Repository
+- Docker Desktop installed and running.
+
+- API Keys for Groq, Gemini, Tavily, RapidAPI, and Ticketmaster.
+
+#### 1. Clone & Configure
 
 ```bash
 git clone https://github.com/berkyalkn/AI-travel-agent
 cd AI-travel-agent
-```
 
-##### 2. Configure Environment Variables
-
-Create a `.env` file in the **server directory** of the project. This file will be injected into the containers at runtime.
-
-```bash
+# Create centralized .env file
 cd server
-
-# Create .env file
 touch .env
 ```
 
-Add your API keys to the `.env` file:
+Add your keys to `server/.env`:
 
 ```bash
-GROQ_API_KEY=your_groq_key_here
-TAVILY_API_KEY=your_tavily_key_here
-RAPIDAPI_KEY=your_rapidapi_key_here
-TICKETMASTER_API_KEY=your_ticketmaster_key_here
+GROQ_API_KEY=...
+GEMINI_API_KEY=...
+TAVILY_API_KEY=...
+RAPIDAPI_KEY=...
+TICKETMASTER_API_KEY=...
 ```
 
-##### 3. Build and Run (Docker Compose)
 
-Run the following command in the root directory. This will build both the Backend and Frontend images and start the services.
+#### 2. Run with Docker Compose
+
+This single command spins up **7** containers (Frontend, Orchestrator, 5 Microservices) and sets up the internal network.
 
 ```bash
+# Return to root directory
+cd ..
 docker-compose up --build
 ```
 
-Wait until you see `Uvicorn running on http://0.0.0.0:8000` in the logs.
+Wait until you see `Uvicorn running on http://0.0.0.0:8000` in the logs and access the application at http://localhost:3000.
 
 ---
-## Cloud Deployment (Red Hat OpenShift)
+## Cloud Deployment (OpenShift / K8s)
 
-This project is designed to be Cloud-Agnostic but includes specific manifests for Red Hat OpenShift (Kubernetes).
+The project includes a production-ready OpenShift configuration with resource limits, recreating strategies, and PVCs..
 
-### Architecture on OpenShift
+#### Automated Deployment (Recommended):
 
-- **Security:** Containers run as non-root users (UUID 100xxx) to comply with OpenShift's restricted SCC.
+Instead of manually applying YAMLs for 7 services, use the included automation script.
 
-- **Networking:** The Frontend communicates with the Backend via an external Route (HTTP), solving CORS issues through middleware configuration.
-
-- **Config Management:** API Keys are injected via Kubernetes Secrets, not hardcoded.
-
-### Deployment Guide
-
-#### Prerequisites:
-
-- `oc` CLI installed and logged in.
-
-- `Docker Hub` account (for pulling images)
-
-
-##### 1.Create Secrets
-
-Securely inject your API keys into the cluster.
+**1- Login to OpenShift:**
 
 ```bash
-oc create secret generic backend-secrets --from-env-file=server/.env
+oc login -u developer -p developer https://api.crc.testing:6443
 ```
 
-##### 2. Build & Push Backend Image
-
-Build the backend image and push it to your Docker Hub repository.
+**2- Run the Deployment Script:** This script builds all images, pushes them to Docker Hub, applies Kubernetes manifests, creates Secrets/PVCs, and links the Frontend to the Backend dynamically.
 
 ```bash
-cd server
-docker build -t youruser/travel-agent-backend:v1 .
-docker push youruser/travel-agent-backend:v1
+chmod +x deploy_all.sh
+./deploy_all.sh
 ```
 
+#### Manual Deployment (Architecture Details)
 
-##### 3.Deploy Backend
+If you prefer manual control, the manifests are located in `openshift/`:
 
-**Important:** Before applying, open `openshift/backend.yaml` and replace the `image` field with your own image name (e.g., `youruser/travel-agent-backend:v1`).
+- `openshift/microservices/*.yaml`: Definitions for internal services (ClusterIP only).
 
-```bash
-# Edit the file first!
-# Then apply:
-oc apply -f openshift/backend.yaml
-```
+- `openshift/backend-deployment.yaml`: Orchestrator config with PVC and Route.
 
-Wait for the pod to be ready:
-
-```bash
-oc get pods -w
-```
-
-##### 4. Build & Deploy Frontend
-
-The Frontend needs the Backend's live URL to function correctly.
-
-- Get the Backend URL:
-
-```bash
-oc get route travel-backend-route
-# Copy the URL (e.g., http://travel-backend-route....crc.testing)
-```
-
-- Re-Build Frontend Image:
-
-```bash
-cd client
-docker build --build-arg VITE_API_URL=http://YOUR_BACKEND_URL_HERE -t youruser/travel-frontend:v1 .
-docker push youruser/travel-frontend:v1
-```
-
-- Deploy Frontend:
-
-*Important:* Open `openshift/frontend.yaml` and update the `image` field to `youruser/travel-frontend:v1`.
-
-```bash
-oc apply -f openshift/frontend.yaml
-```
-
-Your AI Travel Agent is now live on the OpenShift Route URL!
-
-
+- `openshift/frontend-deployment.yaml`: Frontend config.
 
 ---
 
-## Usage
+## 📂 Project Structure
 
-**1. Open the Application:** Navigate to http://localhost:3000 in your browser.
-
-**2. Submit a request:**
- - Example: "I want to plan trip to New York from Antalya for me and my two best friends between 25.09.2025 and 28.09.2025 . We are interested in adventure, museums, and food, and our total budget is around 8,000 euros."
-
-**3. View the Results:**
-- The system will stream the progress of each agent.
-- Once complete, you will see a detailed Markdown itinerary and an Interactive Map.
-
-**4. Access Local Reports:** The generated reports (`trip_itinerary.md` and `trip_itinerary.html`) are automatically synced to your local machine via Docker Volumes. You can find them in:
-
-```bash
-./server/output/
+```plaintext
+AI-travel-agent/
+├── client/                     # React Frontend Application (Vite + Nginx)
+├── server/                     # ORCHESTRATOR
+│   ├── services/               # MICROSERVICES (Independent Containers)
+│   │   ├── flight-service/     # Flight Search Logic (FastAPI + Booking API)
+│   │   ├── hotel-service/      # Hotel Search Logic (FastAPI + Booking API)
+│   │   ├── event-service/      # Event Discovery Logic (FastAPI + Ticketmaster)
+│   │   ├── activity-service/   # Activity Scraping Logic (FastAPI + Tavily)
+│   │   └── geocoding-service/  # Coordinate Mapping Logic (FastAPI + OSM)
+│   ├── output/                 # Shared Volume for Generated Reports (.md/.html)
+│   ├── agent.py                # LangGraph Workflow DAG Definitions
+│   ├── nodes.py                # Agent Functions & LLM Proxy Logic
+│   ├── main.py                 # Orchestrator FastAPI Entry Point
+│   ├── schemas.py              # Central Pydantic Data Models
+│   ├── state.py                # TripState Type Definitions
+│   ├── Dockerfile              # Orchestrator Image Build Instruction
+│   ├── requirements.txt        # Orchestrator Python Dependencies
+│   └── .dockerignore           # Docker Build Optimization
+├── openshift/                  # Kubernetes/OpenShift Deployment Manifests
+├── deploy_all.sh               # Automated Build & Deploy Script
+├── docker-compose.yaml         # Local Development Orchestration (7 Containers)
+├── .gitignore                  # Git Ignore Rules
+└── README.md                   # Project Documentation
 ```
+
 ---
 
 ## Key Engineering Concepts
@@ -324,13 +248,15 @@ This project serves as a showcase of advanced AI Engineering and Cloud Architect
 
 #### Cloud & System Architecture
 
-- **Microservices Pattern:** Decouples the application into distinct Frontend (React/Nginx) and Backend (FastAPI) containers, communicating via a bridge network. This ensures independent scaling and separation of concerns.
+- **Microservices Pattern:** Decouples the application into a Frontend container, an Orchestrator container, and 5 specialized Microservice containers, communicating via a custom bridge network. This ensures independent scaling and strict separation of concerns.
 
 - **Containerization & Security:** Fully dockerized environment following OpenShift security standards (non-root users, arbitrary UID support).
 
+- **Automated DevOps Pipeline:** Includes a custom Bash script (deploy_all.sh) that automates the entire CI/CD-like process: building 7 Docker images, pushing to registry, applying Kubernetes manifests, and dynamically linking services via OpenShift Routes.
+
 - **Resilient Error Handling:** Implements robust retry mechanisms (exponential backoff) and timeout handling for external APIs (e.g., Geocoding), ensuring system stability even during network latency or API outages.
 
-- **Parallel Execution:** Optimizes performance by executing independent blocking I/O operations (Flight, Hotel, and Event searches) concurrently.
+- **Parallel Execution:** Optimizes performance by executing independent blocking I/O operations (Flight, Hotel, and Event searches) concurrently via the Orchestrator.
 
 - **Cloud-Native Deployment Strategy:** The application is architected to run on Kubernetes/OpenShift. It respects strict security contexts (Arbitrary UID), uses Secrets for sensitive key management, and implements Service Discovery via OpenShift Routes.
 
