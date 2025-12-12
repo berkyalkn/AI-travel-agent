@@ -1,26 +1,90 @@
 version: '3.8'
 
-services:
-  backend:
-    build: 
-      context: ./server     
-    container_name: travel-backend
-    ports:
-      - "5001:8000"        
-    env_file:
-      - server/.env               
-    volumes:
-      - ./server/output:/app/output 
-    restart: always
-
-  frontend:
+services: 
+  client:
     build:
-      context: ./client   
+      context: ./client
       args:
-        - VITE_API_URL=http://localhost:5001 
+        VITE_API_URL: "http://localhost:5001" 
     container_name: travel-frontend
     ports:
-      - "3000:8080"         
+      - "3000:8080"
     depends_on:
-      - backend            
+      - server
+    networks:
+      - travel-network
+
+  server:
+    build:
+      context: ./server
+    container_name: travel-orchestrator
+    ports:
+      - "5001:8000" 
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/output:/app/output 
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    depends_on:
+      - flight-service
+      - hotel-service
+      - activity-service
+      - geocoding-service
+      - event-service
+    networks:
+      - travel-network
     restart: always
+
+  flight-service:
+    build:
+      context: ./server/services/flight-service
+    container_name: travel-flight-service
+    env_file:
+      - ./server/.env 
+    networks:
+      - travel-network
+    restart: always
+
+  hotel-service:
+    build:
+      context: ./server/services/hotel-service
+    container_name: travel-hotel-service
+    env_file:
+      - ./server/.env 
+    networks:
+      - travel-network
+    restart: always
+
+  activity-service:
+    build:
+      context: ./server/services/activity-service
+    container_name: travel-activity-service
+    env_file:
+      - ./server/.env 
+    networks:
+      - travel-network
+    restart: always
+
+  geocoding-service:
+    build:
+      context: ./server/services/geocoding-service
+    container_name: travel-geocoding-service
+    networks:
+      - travel-network
+    restart: always
+
+  event-service:
+    build:
+      context: ./server/services/event-service
+    container_name: travel-event-service
+    env_file:
+      - ./server/.env 
+    networks:
+      - travel-network
+    restart: always
+
+networks:
+  travel-network:
+    driver: bridge
