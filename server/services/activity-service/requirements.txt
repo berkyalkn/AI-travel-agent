@@ -4,3 +4,4 @@ pydantic
 python-dotenv
 langchain-tavily
 langchain-core
+prometheus-fastapi-instrumentator

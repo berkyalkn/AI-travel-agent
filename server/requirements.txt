@@ -13,3 +13,4 @@ geopy
 folium
 tenacity
 pathlib
+prometheus-fastapi-instrumentator
