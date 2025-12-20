@@ -2,8 +2,11 @@ import os
 from fastapi import FastAPI, HTTPException
 from langchain_tavily import TavilySearch
 from schemas import ActivitySearchRequest
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app)
 
 @app.post("/search_activities", response_model=str)
 def search_activities(request: ActivitySearchRequest):

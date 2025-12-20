@@ -6,8 +6,11 @@ from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from pydantic import BaseModel
 from schemas import FlightInfo, FlightLeg
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app)
 
 class FlightSearchRequest(BaseModel):
     origin: str
@@ -106,7 +109,7 @@ def fetch_flight_data(origin, dest, start_date, end_date, person, headers):
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        print(f"❌ API Error for {origin}->{dest}: {e}")
+        print(f"API Error for {origin}->{dest}: {e}")
         return None
 
 

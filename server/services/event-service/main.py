@@ -3,8 +3,11 @@ import requests
 from typing import List
 from fastapi import FastAPI, HTTPException
 from schemas import EventSearchRequest, EventInfo
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app)
 
 @app.post("/search_events", response_model=List[EventInfo])
 def search_events(request: EventSearchRequest):
