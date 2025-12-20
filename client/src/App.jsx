@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import './App.css';
 
@@ -33,6 +33,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const abortControllerRef = useRef(null);
+
   const API_URL = `${import.meta.env.VITE_API_URL}/plan-trip-stream`;
 
   const handlePlanTrip = async () => {
@@ -41,6 +43,12 @@ function App() {
     setReportData({ markdown: '', map: null });
     setAgentStatus('Connecting to the AI Travel Agent...'); 
     setIsLoading(true);
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
     const validateForm = () => {
       const newErrors = {};
@@ -72,24 +80,23 @@ function App() {
    
     setIsLoading(true);
     setReportData({ markdown: '', map: null });
-
+  try{
     await fetchEventSource(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ user_query }),
+      signal: signal,
 
       async onopen(response) {
         const contentType = response.headers.get('content-type');
-        console.log("Content-Type header from server:", contentType);
-    
+        
         if (response.ok && contentType && contentType.startsWith('text/event-stream')) {
           console.log("Stream connection successfully established.");
         } else {
-          console.error(`Stream could not be opened. Expected 'text/event-stream', but received '${contentType}'`, response);
-          setErrors({ form: `Server connection error. Invalid content type: ${contentType || 'None received'}` });
-          setIsLoading(false);
+          console.error(`Stream connection failed. Status: ${response.status}`);
+          throw new Error(`Server connection error. Status: ${response.status}`);
         }
       },
 
@@ -105,28 +112,49 @@ function App() {
           });
           setAgentStatus('Your itinerary is ready!');
           setIsLoading(false);
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+
         } else if (event.event === 'error') {
             const data = JSON.parse(event.data);
             setErrors({ form: data.message || 'An error occurred during planning.' });
             setIsLoading(false);
+
+            if (abortControllerRef.current) {
+              abortControllerRef.current.abort();
+            }
+          } else if (event.event === 'error') {
+            const data = JSON.parse(event.data);
+            throw new Error(data.message || 'An error occurred during planning.');
+          
         }
       },
 
       onclose() {
         console.log("Connection closed by the server.");
-        if (isLoading) {
-            setIsLoading(false);
-            setAgentStatus("Stream ended before the report was complete.");
-        }
+        throw new Error("Connection closed cleanly."); 
       },
 
       onerror(err) {
+        if (err.message === "Connection closed cleanly." || signal.aborted) {
+          return;
+        }
+
         console.error("Stream connection error:", err);
-        setErrors({ form: "Failed to connect to the streaming server. Check the console for details." });
+        setErrors({ form: err.message || "Failed to connect to the streaming server." });
         setIsLoading(false);
+        
+        throw err; 
       }
     });
-  };
+  } catch (err) {
+
+    if (!signal.aborted && err.message !== "Connection closed cleanly.") {
+       console.error("Detailed Error:", err);
+    }
+  }
+};
 
   return (
     <div className="App">
