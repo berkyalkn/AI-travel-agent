@@ -400,6 +400,7 @@ def activity_scheduling_agent(state: TripState) -> dict:
     """
     Schedules the activities day by day using LLM.
     Includes robust error handling for LLM tool call failures.
+    And MOST IMPORTANTLY: Re-attaches coordinates to the scheduled activities.
     """
     print("--- Running Activity Scheduling Agent ---")
     
@@ -412,6 +413,8 @@ def activity_scheduling_agent(state: TripState) -> dict:
         return {"final_itinerary": None}
 
     print(f"-> Received {len(extracted_activities)} activities and {len(events)} events to schedule.")
+
+    activity_lookup = {act.name: act for act in extracted_activities}
 
     scheduler_llm = llm.bind_tools([ScheduledActivities])
     
@@ -434,6 +437,7 @@ def activity_scheduling_agent(state: TripState) -> dict:
     2. Group nearby activities together to minimize travel time.
     3. Ensure each day has a balanced mix of morning, afternoon, and evening activities.
     4. Call the `ScheduledActivities` tool with your final plan.
+    5. IMPORTANT: Use the EXACT activity names provided in the input list.
     """
 
     max_retries = 3
@@ -445,12 +449,27 @@ def activity_scheduling_agent(state: TripState) -> dict:
                 tool_call = ai_message.tool_calls[0]
                 scheduled_plan = ScheduledActivities(**tool_call['args'])
                 
+                for day_plan in scheduled_plan.daily_plans:
+                    for scheduled_act in day_plan.activities:
+                        original_act = activity_lookup.get(scheduled_act.name)
+                        
+                        if original_act and original_act.latitude and original_act.longitude:
+                            scheduled_act.latitude = original_act.latitude
+                            scheduled_act.longitude = original_act.longitude
+                        else:
+                            for orig_name, orig_act in activity_lookup.items():
+                                if scheduled_act.name in orig_name or orig_name in scheduled_act.name:
+                                    if orig_act.latitude and orig_act.longitude:
+                                        scheduled_act.latitude = orig_act.latitude
+                                        scheduled_act.longitude = orig_act.longitude
+                                        break
+
                 final_itinerary = Itinerary(
                     selected_flight=state['selected_flight'],
                     selected_hotel=state['selected_hotel'],
                     daily_plans=scheduled_plan.daily_plans
                 )
-                print("-> Final Itinerary Assembled Successfully.")
+                print("-> Final Itinerary Assembled Successfully (Coordinates Preserved).")
                 return {"final_itinerary": final_itinerary}
             
             else:
@@ -733,19 +752,20 @@ def report_formattor_node(state: TripState) -> dict:
         
         md += "## 🏨 Hotel Information\n"
         
-        if hotel.main_photo_url:
-            md += f"![{hotel.hotel_name}]({hotel.main_photo_url})\n\n"
+        photo_url = hotel.main_photo_url
+        if photo_url and "square60" in photo_url:
+            photo_url = photo_url.replace("square60", "max500")
+            
+        if photo_url:
+            md += f"![{hotel.hotel_name}]({photo_url})\n\n"
             
         md += f"### {hotel.hotel_name}\n"
         md += f"**Rating:** {hotel.rating} / 10.0 ({hotel.rating_word} based on {hotel.review_count} reviews)\n"
         md += f"**Taxes and Fees:** ~€{hotel.price_per_night:,.2f}\n" 
-        md += f"**Total Price (for {num_nights} nights, {trip_plan.person} people):** €{hotel.total_price:,.2f}\n\n"
-        md += "\n"
-
-        if hotel.static_map_url:
-            interactive_map_url = f"https://www.google.com/maps/search/?api=1&query={hotel.hotel_name.replace(' ', '+')}"
-            
-            md += f"[![Map of {hotel.hotel_name}]({hotel.static_map_url})]({interactive_map_url})\n\n"
+        md += f"**Total Price (for {num_nights} nights, {trip_plan.person} people):** €{hotel.total_price:,.2f}\n"
+        
+        google_maps_url = f"https://www.google.com/maps/search/?api=1&query={hotel.hotel_name.replace(' ', '+')}"
+        md += f"- **Location:** [{hotel.hotel_name} on Google Maps]({google_maps_url})\n\n"
 
 
         if events:
@@ -779,11 +799,6 @@ def report_formattor_node(state: TripState) -> dict:
                 
                     activity_counter += 1
 
-
-        if map_html_content:
-            md += "\n---\n\n## 📍 Interactive Trip Map\n"
-            md += "Click on the numbered pins to see activity details.\n\n"
-
         final_report_md = md
 
     output_dir = "output"
@@ -807,20 +822,13 @@ def report_formattor_node(state: TripState) -> dict:
 
         html_body = markdown2.markdown(final_report_md, extras=["tables", "fenced-code-blocks"])
 
-        if map_html_content:
-            print(f"-> Injecting map into HTML Report (Size: {len(map_html_content)} chars)")
-            html_body += f"""
-            <div class="map-container">
-                <h2>📍 Interactive Trip Map</h2>
-                <p>Click on the numbered pins to see activity details.</p>
-                {map_html_content}
-            </div>
-            """
-        
         full_html = f'<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>AI Trip Plan</title>{css_style}</head><body>{html_body}</body></html>'
         with open(html_path, "w", encoding="utf-8") as f: f.write(full_html)
         print(f"-> HTML report saved to: {html_path}")
     except Exception as e:
         print(f"An error occurred while saving files: {e}")
 
-    return {"markdown_report": final_report_md}
+    return {
+        "markdown_report": final_report_md,
+        "map_html": map_html_content 
+    }
