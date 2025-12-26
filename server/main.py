@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from prometheus_fastapi_instrumentator import Instrumentator
+import os
 
 
 from agent import app as travel_agent_app
@@ -43,6 +44,26 @@ def read_root():
 
 @app.post("/plan-trip-stream")
 async def plan_trip_stream(request: PlanRequest):
+
+    if os.getenv("MOCK_MODE") == "True":
+        async def mock_event_stream():
+            yield f"event: status\ndata: {json.dumps({'message': 'TEST MODE: Planning trip...'})}\n\n"
+            await asyncio.sleep(0.5)
+            
+            yield f"event: status\ndata: {json.dumps({'message': 'TEST MODE: Calling Flight Service...'})}\n\n"
+            await asyncio.sleep(0.5)
+
+            yield f"event: status\ndata: {json.dumps({'message': 'TEST MODE: Generating report...'})}\n\n"
+            await asyncio.sleep(0.5)
+
+            final_data = {
+                "markdown_report": "# Test Report\n\nThis is a generated response for Load Testing.",
+                "map_html": None
+            }
+            yield f"event: final_report\ndata: {json.dumps(final_data)}\n\n"
+
+        return StreamingResponse(mock_event_stream(), media_type="text/event-stream")
+
     initial_state = {"user_request": request.user_query}
 
     async def event_stream():
