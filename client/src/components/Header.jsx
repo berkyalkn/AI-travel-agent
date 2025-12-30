@@ -5,7 +5,7 @@ function Header() {
   return (
     <header className="App-header gradient-header">
       <div className="title-container">
-        <h1>AI Travel Agent</h1>
+        <h1>Cloud Native AI Travel Agent</h1>
         <FaPlaneDeparture className="plane-icon" />
       </div>
       <p>Describe your trip, and I'll create a detailed itinerary for you.</p>
